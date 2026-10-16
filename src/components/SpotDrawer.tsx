@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { X, ArrowDown, MapPin, Shield, Compass, Info, Wind } from "lucide-react";
+import { X, ArrowDown, MapPin, Shield, Compass, Info, AlertTriangle, Anchor } from "lucide-react";
 import type { DivePoint } from "@/data/points";
-import { calculateUnderwaterSurge, getAngleDiff, type SwellEvaluation } from "@/lib/swellCalc";
+import {
+  calculateUnderwaterSurge,
+  estimateSurfFace,
+  getAngleDiff,
+  type SwellEvaluation,
+} from "@/lib/swellCalc";
 import type { PointHourly } from "@/lib/fetchMarineData";
+import { getTideInput, weekdayJa, type TideData } from "@/lib/tideCalc";
 
-const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 const DIRS = ["北", "北北東", "北東", "東北東", "東", "東南東", "南東", "南南東", "南", "南南西", "南西", "西南西", "西", "西北西", "北西", "北北西"];
 export const dirName = (deg: number) => DIRS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
 
@@ -30,13 +35,13 @@ interface Props {
   point: DivePoint | null;
   open: boolean;
   hourly?: PointHourly;
-  lowTide: boolean;
+  tide: TideData;
   hourIdx: number;
   onSelectHour: (i: number) => void;
   onClose: () => void;
 }
 
-export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSelectHour, onClose }: Props) {
+export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelectHour, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Escキーで閉じる
@@ -47,7 +52,7 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
     return () => window.removeEventListener("keydown", fn);
   }, [open, onClose]);
 
-  // 3時間おきのカラム（干潮モードに連動して再計算）
+  // 3時間おきのカラム（潮位による自動リーフ遮蔽を含めて計算）
   const cols = useMemo(() => {
     if (!point || !hourly) return [];
     return hourly.time
@@ -57,6 +62,7 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
         const sh = hourly.swellHeight[i] ?? null;
         const sp = hourly.swellPeriod[i] ?? null;
         const sd = hourly.swellDirection[i] ?? null;
+        const tideIn = getTideInput(tide, t);
         return {
           t,
           i,
@@ -64,17 +70,33 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
           sp,
           sd,
           wh: hourly.waveHeight[i] ?? null,
-          wwh: hourly.windWaveHeight[i] ?? null,
           ws: hourly.windSpeed[i] ?? null,
           wg: hourly.windGusts[i] ?? null,
           wd: hourly.windDirection[i] ?? null,
-          ev: calculateUnderwaterSurge(sh, sp, sd, point, lowTide),
+          tideCm: tideIn.tideCm,
+          tideDelta: tideIn.deltaCm,
+          surf: estimateSurfFace(sh, sp, sd, point),
+          ev: calculateUnderwaterSurge(sh, sp, sd, point, tideIn),
         };
       });
-  }, [point, hourly, lowTide]);
+  }, [point, hourly, tide]);
 
   // スライダーの時刻を含む3時間枠をハイライト
   const activeCol = cols.findIndex((c) => c.i <= hourIdx && hourIdx < c.i + 3);
+
+  // スライダー時刻ちょうどの評価（ヘッダーの注意報表示用）
+  const current = useMemo(() => {
+    if (!point || !hourly) return null;
+    const t = hourly.time[hourIdx];
+    const tideIn = getTideInput(tide, t);
+    return calculateUnderwaterSurge(
+      hourly.swellHeight[hourIdx] ?? null,
+      hourly.swellPeriod[hourIdx] ?? null,
+      hourly.swellDirection[hourIdx] ?? null,
+      point,
+      tideIn
+    );
+  }, [point, hourly, tide, hourIdx]);
 
   // ハイライト列が見えるようにスクロール
   useEffect(() => {
@@ -83,7 +105,8 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [open, activeCol]);
 
-  const LABEL = "sticky left-0 z-10 bg-white/95 backdrop-blur pr-3 pl-4 text-left text-[11px] font-medium text-slate-500 whitespace-nowrap border-r border-slate-100";
+  const LABEL =
+    "sticky left-0 z-10 bg-white/95 backdrop-blur whitespace-nowrap border-r border-slate-100 text-left font-medium text-slate-500 pl-2 pr-1.5 text-[10px] md:pl-4 md:pr-3 md:text-[11px]";
 
   return (
     <>
@@ -99,40 +122,57 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
         role="dialog"
         aria-modal="true"
         aria-label={point ? `${point.name}の時間別予報` : "時間別予報"}
-        className={`fixed bottom-0 left-0 right-0 z-50 flex h-[52vh] min-h-[420px] flex-col rounded-t-3xl border-t border-sky-100 bg-white shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92dvh] flex-col rounded-t-3xl border-t border-sky-100 bg-white pb-2 shadow-2xl transition-transform duration-300 ease-out md:max-h-[85vh] md:pb-4 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
         {point && (
           <>
             {/* ヘッダー */}
-            <div className="relative shrink-0 border-b border-slate-100 px-5 pb-3 pt-3 sm:px-8">
-              <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-slate-200" />
+            <div className="relative shrink-0 border-b border-slate-100 px-3 pb-2 pt-2 md:px-8 md:pb-3 md:pt-3">
+              <div className="mx-auto mb-1.5 h-1 w-10 rounded-full bg-slate-200 md:mb-2 md:h-1.5 md:w-12" />
               <button
                 id="drawer-close"
                 onClick={onClose}
                 aria-label="閉じる"
-                className="absolute right-4 top-4 rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+                className="absolute right-2 top-2 rounded-full bg-slate-100 p-1.5 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 md:right-4 md:top-4 md:p-2"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 md:h-5 md:w-5" />
               </button>
-              <div className="flex flex-wrap items-center gap-2 pr-12">
-                <h2 className="text-lg font-bold text-slate-800 sm:text-xl">{point.name}</h2>
+              <div className="flex flex-wrap items-center gap-1.5 pr-10 md:gap-2 md:pr-12">
+                <h2 className="text-sm font-bold text-slate-800 md:text-xl">{point.name}</h2>
                 {point.subName && (
-                  <span className="rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">{point.subName}</span>
+                  <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 md:px-2 md:text-xs">{point.subName}</span>
                 )}
-                {lowTide && point.hasOuterReef && (
-                  <span className="rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-200">干潮補正中</span>
+                {current?.reefShielded && (
+                  <span className="flex items-center gap-0.5 rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200 md:text-xs">
+                    <Anchor className="h-3 w-3" />干潮リーフ遮断中（潮位{current.tideCm}cm）
+                  </span>
                 )}
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-sky-500" />{point.area}・基準水深 {point.targetDepth}m</span>
-                <span className="flex items-center gap-1"><Compass className="h-3.5 w-3.5 text-sky-500" />開口：{dirName(point.openDirection)}（{point.openDirection}°±{point.openAngleWidth}°）</span>
-                <span className="flex items-center gap-1"><Shield className="h-3.5 w-3.5 text-sky-500" />リーフ減衰率 {Math.round(point.reefProtection * 100)}%{point.hasOuterReef ? "（アウターリーフあり）" : ""}</span>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-600 md:mt-1.5 md:gap-x-4 md:gap-y-1 md:text-xs">
+                <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-sky-500 md:h-3.5 md:w-3.5" />{point.area}・基準水深 {point.targetDepth}m</span>
+                <span className="flex items-center gap-1"><Compass className="h-3 w-3 text-sky-500 md:h-3.5 md:w-3.5" />開口：{dirName(point.openDirection)}（{point.openDirection}°±{point.openAngleWidth}°）</span>
+                <span className="flex items-center gap-1">
+                  <Shield className="h-3 w-3 text-sky-500 md:h-3.5 md:w-3.5" />
+                  リーフ減衰率 {Math.round(point.reefProtection * 100)}%
+                  {point.reefThresholdCm !== undefined ? `（潮位${point.reefThresholdCm}cm以下で遮断）` : point.hasOuterReef ? "（アウターリーフあり）" : ""}
+                </span>
               </div>
-              <p className="mt-1.5 flex gap-1.5 text-xs leading-relaxed text-slate-500">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-500" />{point.note}
+              <p className="mt-1 flex gap-1 text-[10px] leading-snug text-slate-500 md:mt-1.5 md:gap-1.5 md:text-xs md:leading-relaxed">
+                <Info className="mt-0.5 h-3 w-3 shrink-0 text-sky-500 md:h-3.5 md:w-3.5" />
+                <span className="line-clamp-2 md:line-clamp-none">{point.note}</span>
               </p>
+              {current && current.currentAlerts.length > 0 && (
+                <div className="mt-1.5 space-y-1 md:mt-2">
+                  {current.currentAlerts.map((a) => (
+                    <p key={a.type} className="flex gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[10px] leading-snug text-amber-800 ring-1 ring-amber-200 md:px-3 md:py-1.5 md:text-xs">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 md:h-3.5 md:w-3.5" />
+                      <span><b>{a.title}：</b>{a.message}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* タイムテーブル */}
@@ -142,20 +182,19 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
               ) : (
                 <table className="border-separate border-spacing-0 text-center">
                   <tbody>
-                    {/* ① 日付 */}
+                    {/* 日付 */}
                     <tr>
-                      <th className={`${LABEL} pt-2`}>日付</th>
+                      <th className={`${LABEL} pt-1 md:pt-2`}>日付</th>
                       {cols.map((c, k) => {
                         const first = k === 0 || c.t.slice(0, 10) !== cols[k - 1].t.slice(0, 10);
-                        const w = WEEK[new Date(c.t.slice(0, 10) + "T00:00:00Z").getUTCDay()];
                         return (
-                          <td key={c.t} className={`h-7 whitespace-nowrap pt-2 text-left text-xs font-bold text-slate-700 ${first ? "border-l border-slate-200 pl-1.5" : ""}`}>
-                            {first ? `${c.t.slice(5, 7)}/${c.t.slice(8, 10)}(${w})` : ""}
+                          <td key={c.t} className={`h-5 whitespace-nowrap pt-1 text-left text-[10px] font-bold text-slate-700 md:h-7 md:pt-2 md:text-xs ${first ? "border-l border-slate-200 pl-1 md:pl-1.5" : ""}`}>
+                            {first ? `${c.t.slice(5, 7)}/${c.t.slice(8, 10)}(${weekdayJa(c.t)})` : ""}
                           </td>
                         );
                       })}
                     </tr>
-                    {/* ② 時間 */}
+                    {/* 時間 */}
                     <tr>
                       <th className={LABEL}>時間</th>
                       {cols.map((c, k) => (
@@ -163,7 +202,7 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
                           <button
                             data-col={k}
                             onClick={() => onSelectHour(c.i)}
-                            className={`w-14 py-1 font-mono text-sm transition ${
+                            className={`w-11 py-0.5 font-mono text-[11px] transition md:w-14 md:py-1 md:text-sm ${
                               k === activeCol ? "rounded-t-lg bg-rose-500 font-bold text-white" : "text-slate-600 hover:bg-sky-50"
                             }`}
                           >
@@ -172,101 +211,115 @@ export default function SpotDrawer({ point, open, hourly, lowTide, hourIdx, onSe
                         </td>
                       ))}
                     </tr>
-                    {/* ③ 判定カラーバー */}
+                    {/* 判定カラーバー */}
                     <tr>
                       <th className={LABEL}>判定</th>
                       {cols.map((c, k) => (
                         <td key={c.t} className={`p-0 ${k === activeCol ? "bg-rose-50" : ""}`} onClick={() => onSelectHour(c.i)}>
-                          <div className={`h-2.5 ${CELL_BG[c.ev.status]}`} title={c.ev.label} />
+                          <div className={`h-1.5 md:h-2.5 ${CELL_BG[c.ev.status]}`} title={c.ev.label} />
                         </td>
                       ))}
                     </tr>
-                    {/* ④ 振られ幅 */}
-                    <Row label="振られ幅 (cm)" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* 振られ幅 */}
+                    <Row label="振られ幅 cm" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => (
-                        <span className={`text-lg font-black ${c.ev.status === "danger" ? "text-rose-600" : c.ev.status === "caution" ? "text-amber-600" : "text-sky-900"}`}>
+                        <span className={`text-sm font-black md:text-lg ${c.ev.status === "danger" ? "text-rose-600" : c.ev.status === "caution" ? "text-amber-600" : "text-sky-900"}`}>
                           {c.ev.bottomSurgeCm}
                         </span>
                       )}
                     </Row>
-                    {/* ⑤ 実効うねり / 沖のうねり高 */}
-                    <Row label={<>実効うねり<br /><span className="text-[10px] text-slate-400">沖のうねり高 (m)</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* 実効うねり / 沖の波高 */}
+                    <Row label={<>実効うねり<span className="text-slate-400">/波高</span> m</>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => (
-                        <div className="leading-tight">
-                          <div className="font-mono text-sm font-bold text-slate-800">{c.ev.effectiveSwellHeight.toFixed(2)}</div>
-                          <div className="font-mono text-[10px] text-slate-400">{c.sh?.toFixed(1) ?? "-"}</div>
+                        <div className="leading-none md:leading-tight">
+                          <div className="font-mono text-[11px] font-bold text-slate-800 md:text-sm">{c.ev.effectiveSwellHeight.toFixed(2)}</div>
+                          <div className={`font-mono text-[9px] md:text-[10px] ${c.wh !== null && c.wh >= 2 ? "font-bold text-rose-600" : c.wh !== null && c.wh >= 1.25 ? "font-bold text-amber-600" : "text-slate-400"}`}>
+                            {c.wh?.toFixed(1) ?? "-"}
+                          </div>
                         </div>
                       )}
                     </Row>
-                    {/* ⑥ 周期 */}
-                    <Row label="うねり周期 (s)" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
-                      {(c) => (
-                        <span className={`font-mono text-sm ${c.sp !== null && c.sp >= 8 ? "font-bold text-orange-600" : "text-slate-600"}`}>
-                          {c.sp?.toFixed(1) ?? "-"}
-                        </span>
-                      )}
+                    {/* 波乗り高さ */}
+                    <Row label={<>波乗り高さ<span className="hidden text-slate-400 md:inline">（目安）</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                      {(c) =>
+                        c.surf ? (
+                          <div className="leading-none md:leading-tight">
+                            <div className="text-[10px] font-bold text-slate-700 md:text-xs">{c.surf.label}</div>
+                            <div className="font-mono text-[9px] text-slate-400 md:text-[10px]">{c.surf.meters.toFixed(1)}m</div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )
+                      }
                     </Row>
-                    {/* ⑧ うねりの向き */}
-                    <Row label="うねりの向き" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* うねり 周期＆向き */}
+                    <Row label={<>うねり<span className="text-slate-400"> 周期s/向き</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => {
-                        if (c.sd === null) return <span className="text-slate-400">-</span>;
-                        const diff = getAngleDiff(c.sd, point.openDirection);
+                        const diff = c.sd === null ? null : getAngleDiff(c.sd, point.openDirection);
                         const color =
-                          diff <= point.openAngleWidth * 0.5 ? "text-rose-500"
+                          diff === null ? "text-slate-400"
+                          : diff <= point.openAngleWidth * 0.5 ? "text-rose-500"
                           : diff <= point.openAngleWidth ? "text-orange-500"
                           : diff <= point.openAngleWidth + 45 ? "text-sky-500"
                           : "text-slate-400";
                         return (
-                          <div className={`flex flex-col items-center ${color}`}>
-                            {/* ArrowDown(下向き)を来る方向に回転 → 波の進行方向を示す */}
-                            <ArrowDown className="h-5 w-5" strokeWidth={2.75} style={{ transform: `rotate(${c.sd}deg)` }} />
-                            <span className="text-[10px] font-semibold">{dirName(c.sd)}</span>
+                          <div className="flex flex-col items-center leading-none">
+                            <div className="flex items-center gap-0.5">
+                              {c.sd !== null && (
+                                <ArrowDown className={`h-3.5 w-3.5 md:h-5 md:w-5 ${color}`} strokeWidth={2.75} style={{ transform: `rotate(${c.sd}deg)` }} />
+                              )}
+                              <span className={`font-mono text-[11px] md:text-sm ${c.sp !== null && c.sp >= 8 ? "font-bold text-orange-600" : "text-slate-600"}`}>
+                                {c.sp?.toFixed(0) ?? "-"}
+                              </span>
+                            </div>
+                            <span className={`text-[9px] font-semibold md:text-[10px] ${color}`}>{c.sd !== null ? dirName(c.sd) : "-"}</span>
                           </div>
                         );
                       }}
                     </Row>
-
-                    {/* ── 波と風 ── */}
-                    <tr>
-                      <th className={`${LABEL} bg-sky-50/95 py-1 text-[10px] font-bold text-sky-700`}>
-                        <span className="flex items-center gap-1"><Wind className="h-3 w-3" />波と風</span>
-                      </th>
-                      <td colSpan={cols.length} className="bg-sky-50 py-1" />
-                    </tr>
-                    {/* ⑨ 波の高さ */}
-                    <Row label={<>波の高さ (m)<br /><span className="text-[10px] text-slate-400">うち風波</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
-                      {(c) => (
-                        <div className="leading-tight">
-                          <div className={`font-mono text-sm font-bold ${c.wh !== null && c.wh >= 2 ? "text-rose-600" : c.wh !== null && c.wh >= 1.25 ? "text-amber-600" : "text-slate-800"}`}>
-                            {c.wh?.toFixed(1) ?? "-"}
-                          </div>
-                          <div className="font-mono text-[10px] text-slate-400">{c.wwh?.toFixed(1) ?? "-"}</div>
-                        </div>
-                      )}
-                    </Row>
-                    {/* ⑩ 風速 */}
-                    <Row label={<>風速 (m/s)<br /><span className="text-[10px] text-slate-400">最大瞬間</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
-                      {(c) => (
-                        <div className="leading-tight">
-                          <div className={`font-mono text-sm font-bold ${windColor(c.ws)}`}>{c.ws?.toFixed(0) ?? "-"}</div>
-                          <div className="font-mono text-[10px] text-slate-400">{c.wg?.toFixed(0) ?? "-"}</div>
-                        </div>
-                      )}
-                    </Row>
-                    {/* ⑪ 風向 */}
-                    <Row label={<>風向<br /><span className="text-[10px] text-slate-400">赤=向かい風 / 青=風裏</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL} last>
+                    {/* 風 速度＆向き */}
+                    <Row label={<>風<span className="text-slate-400"> m/s/向き</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => {
-                        if (c.wd === null) return <span className="text-slate-400">-</span>;
                         // 海側(開口方向)から吹く=向かい風(オンショア)、陸側から=風裏(オフショア)
-                        const diff = getAngleDiff(c.wd, point.openDirection);
-                        const color = diff <= 45 ? "text-rose-500" : diff <= 90 ? "text-orange-500" : diff <= 135 ? "text-slate-400" : "text-sky-500";
+                        const diff = c.wd === null ? null : getAngleDiff(c.wd, point.openDirection);
+                        const color =
+                          diff === null ? "text-slate-400"
+                          : diff <= 45 ? "text-rose-500"
+                          : diff <= 90 ? "text-orange-500"
+                          : diff <= 135 ? "text-slate-400"
+                          : "text-sky-500";
                         return (
-                          <div className={`flex flex-col items-center ${color}`}>
-                            <ArrowDown className="h-5 w-5" strokeWidth={2.75} style={{ transform: `rotate(${c.wd}deg)` }} />
-                            <span className="text-[10px] font-semibold">{dirName(c.wd)}</span>
+                          <div className="flex flex-col items-center leading-none">
+                            <div className="flex items-center gap-0.5">
+                              {c.wd !== null && (
+                                <ArrowDown className={`h-3.5 w-3.5 md:h-5 md:w-5 ${color}`} strokeWidth={2.75} style={{ transform: `rotate(${c.wd}deg)` }} />
+                              )}
+                              <span className={`font-mono text-[11px] font-bold md:text-sm ${windColor(c.ws)}`}>{c.ws?.toFixed(0) ?? "-"}</span>
+                            </div>
+                            <span className={`text-[9px] font-semibold md:text-[10px] ${color}`}>
+                              {c.wd !== null ? dirName(c.wd) : "-"}
+                              <span className="hidden font-normal text-slate-400 md:inline">{c.wg !== null ? ` 最大${c.wg.toFixed(0)}` : ""}</span>
+                            </span>
                           </div>
                         );
                       }}
+                    </Row>
+                    {/* 潮位 */}
+                    <Row label={<>潮位 cm<span className="hidden text-slate-400 md:inline">（那覇）</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL} last>
+                      {(c) => (
+                        <div className={`relative mx-auto flex w-fit flex-col items-center rounded px-1 leading-none ${c.ev.reefShielded ? "bg-teal-50 text-teal-700" : "text-slate-700"}`}>
+                          <span className="font-mono text-[11px] font-bold md:text-sm">
+                            {c.tideCm ?? "-"}
+                            {c.tideDelta !== null && (
+                              <span className="ml-px text-[9px]">{c.tideDelta > 0 ? "↑" : c.tideDelta < 0 ? "↓" : "→"}</span>
+                            )}
+                          </span>
+                          <span className="text-[9px] md:text-[10px]">
+                            {c.ev.reefShielded ? "⚓遮断" : ""}
+                            {c.ev.currentAlerts.length > 0 && <span className="font-bold text-amber-600">⚠</span>}
+                          </span>
+                        </div>
+                      )}
                     </Row>
                   </tbody>
                 </table>
@@ -286,10 +339,12 @@ type Col = {
   sp: number | null;
   sd: number | null;
   wh: number | null;
-  wwh: number | null;
   ws: number | null;
   wg: number | null;
   wd: number | null;
+  tideCm: number | null;
+  tideDelta: number | null;
+  surf: { meters: number; label: string } | null;
   ev: SwellEvaluation;
 };
 
@@ -306,13 +361,13 @@ function Row({
 }) {
   return (
     <tr>
-      <th className={`${labelCls} border-b border-slate-100 py-2`}>{label}</th>
+      <th className={`${labelCls} border-b border-slate-100 py-1 md:py-2`}>{label}</th>
       {cols.map((c, k) => (
         <td
           key={c.t}
           onClick={() => onSelect(c.i)}
-          className={`h-12 cursor-pointer border-b border-slate-100 px-1 ${
-            k === activeCol ? `bg-rose-50 ring-inset ${last ? "rounded-b-lg" : ""}` : "hover:bg-sky-50/60"
+          className={`h-8 cursor-pointer border-b border-slate-100 px-0.5 md:h-12 md:px-1 ${
+            k === activeCol ? `bg-rose-50 ${last ? "rounded-b-lg" : ""}` : "hover:bg-sky-50/60"
           }`}
         >
           {children(c)}

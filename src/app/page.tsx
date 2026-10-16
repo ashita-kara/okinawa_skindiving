@@ -1,7 +1,8 @@
 import { fetchMarineData } from "@/lib/fetchMarineData";
+import { fetchTideData } from "@/lib/fetchTideData";
 import SurgeDashboard from "@/components/SurgeDashboard";
 
 export default async function Home() {
-  const data = await fetchMarineData();
-  return <SurgeDashboard data={data} />;
+  const [data, tide] = await Promise.all([fetchMarineData(), fetchTideData()]);
+  return <SurgeDashboard data={data} tide={tide} />;
 }
