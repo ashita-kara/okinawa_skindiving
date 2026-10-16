@@ -146,7 +146,7 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
                 )}
                 {current?.reefShielded && (
                   <span className="flex items-center gap-0.5 rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200 md:text-xs">
-                    <Anchor className="h-3 w-3" />干潮リーフ遮断中（潮位{current.tideCm}cm）
+                    <Anchor className="h-3 w-3" />干潮リーフ遮断中（{point.reefThresholdCm}cm以下・現在{current.tideCm}cm）
                   </span>
                 )}
               </div>

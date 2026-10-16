@@ -12,7 +12,7 @@ const TIDE_NAME_STYLE: Record<TideName, string> = {
   若潮: "bg-emerald-100 text-emerald-700",
 };
 
-const REEF_BAND = { low: 110, high: 120 }; // リーフ遮断の目安帯（ポイント別閾値の範囲）
+const REEF_BAND = { low: 80, high: 120 }; // リーフ遮断の目安帯（ポイント別閾値 80〜120cm の範囲）
 
 interface Props {
   tide: TideData;

@@ -362,7 +362,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
                         )}
                         {ev.reefShielded && (
                           <span className="inline-flex items-center gap-0.5 rounded-md bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-700 ring-1 ring-teal-200">
-                            <Anchor className="h-3 w-3" /> 干潮リーフ遮断中（潮位{ev.tideCm}cm）
+                            <Anchor className="h-3 w-3" /> 干潮リーフ遮断中（{p.reefThresholdCm}cm以下・現在{ev.tideCm}cm）
                           </span>
                         )}
                       </div>

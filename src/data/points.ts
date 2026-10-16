@@ -49,7 +49,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.65,
     hasOuterReef: true,
-    reefThresholdCm: 115,
+    reefThresholdCm: 105,
     note: "熱帯魚が多いメインのイノー。満潮時で南うねりが強い日は水路から流れが入るので注意。"
   },
   {
@@ -65,7 +65,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.55,
     hasOuterReef: true,
-    reefThresholdCm: 110,
+    reefThresholdCm: 90,
     note: "沖のリーフ切れ目に近く、下げ潮時は沖向きのカレント（離岸流）が発生しやすい。"
   },
   {
@@ -81,7 +81,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.50,
     hasOuterReef: true,
-    reefThresholdCm: 110,
+    reefThresholdCm: 80,
     note: "外洋との水交換が良く透明度が高い分、うねりがある日は流れと揺れが入りやすい。"
   },
   {
@@ -112,7 +112,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.70,
     hasOuterReef: true,
-    reefThresholdCm: 115,
+    reefThresholdCm: 100,
     note: "北風に強い南部の定番ビーチ。インリーフは浅く穏やかで初心者や練習にも適する。"
   },
   {
@@ -173,8 +173,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 40,
     openAngleWidth: 70,
     reefProtection: 0.45,
-    hasOuterReef: true,
-    reefThresholdCm: 115,
+    hasOuterReef: false,
     note: "読谷村北東向き海岸。リーフエッジまで距離があり浅場は守られているが、干潮時は水深が浅くなりすぎる点に注意。"
   },
   {
@@ -218,9 +217,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 350,
     openAngleWidth: 65,
     reefProtection: 0.40,
-    hasOuterReef: true,
-    reefThresholdCm: 110,
-    note: "真栄田岬のすぐ隣だが遠浅のリーフに守られており、真栄田よりうねりが一段階抑えられる。"
+    hasOuterReef: false,
+    note: "真栄田岬のすぐ隣だが遠浅の地形に守られており、真栄田よりうねりが一段階抑えられる。"
   },
   {
     id: "apogama",
@@ -247,9 +245,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 330,
     openAngleWidth: 75,
     reefProtection: 0.50,
-    hasOuterReef: true,
-    reefThresholdCm: 110,
-    note: "旧ダイヤモンドビーチ／アカティーダバンタ一帯（同一予報メッシュのため統合）。インリーフの砂地とサンゴが美しく、干潮時はアウターリーフがうねりを軽減。北西〜北東うねりに注意。"
+    hasOuterReef: false,
+    note: "旧ダイヤモンドビーチ／アカティーダバンタ一帯（同一予報メッシュのため統合）。砂地とサンゴが美しいが、北西〜北東うねりに注意。"
   },
   {
     id: "kibogaoka",
@@ -262,9 +259,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 320,
     openAngleWidth: 65,
     reefProtection: 0.45,
-    hasOuterReef: true,
-    reefThresholdCm: 110,
-    note: "沖のリーフパッチに魚影が濃い。北西のうねりが強い日は水路の流れに注意。"
+    hasOuterReef: false,
+    note: "沖のリーフパッチに魚影が濃い。北西のうねりが強い日は流れと揺れに注意。"
   },
 
   // ================= 名護・本部 =================
@@ -321,8 +317,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 345,
     openAngleWidth: 38,
     reefProtection: 0.55,
-    hasOuterReef: true,
-    reefThresholdCm: 115,
+    hasOuterReef: false,
     note: "瀬底島・本部半島・北側の浅根群に守られ基本的にうねりを受けにくい。伊江水道の隙間（北北西）からの強いうねりと、海峡の大潮カレントに注意。"
   },
   {
@@ -351,8 +346,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.50,
     hasOuterReef: true,
-    reefThresholdCm: 120,
-    note: "北西に突き出た岬。干潮時は穏やかだが、満潮からの下げ潮時は先端周辺で速い潮流が出る。"
+    reefThresholdCm: 85,
+    note: "北西に突き出た岬。潮位85cm以下まで引くと周囲のリーフで遮断され穏やかになるが、満潮からの下げ潮時は先端周辺で速い潮流が出るため要注意。"
   },
   {
     id: "minna",
@@ -381,8 +376,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 300,
     openAngleWidth: 75,
     reefProtection: 0.35,
-    hasOuterReef: true,
-    reefThresholdCm: 110,
+    hasOuterReef: false,
     note: "東〜南東風の日に穏やかになるやんばる西海岸。冬場の北西季節風・うねりは直撃する。"
   },
   {
@@ -482,8 +476,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 210,
     openAngleWidth: 60,
     reefProtection: 0.55,
-    hasOuterReef: true,
-    reefThresholdCm: 115,
+    hasOuterReef: false,
     note: "南西向き。ニシバマが北風で荒れている日の完璧な風裏・避難ポイント。干潮時はかなり浅くなる。"
   },
   {
@@ -497,8 +490,7 @@ export const DIVE_POINTS: DivePoint[] = [
     openDirection: 150,
     openAngleWidth: 65,
     reefProtection: 0.45,
-    hasOuterReef: true,
-    reefThresholdCm: 110,
+    hasOuterReef: false,
     note: "南東向きでウミガメの遭遇率が極めて高い。北〜北西の風・うねりに強い。"
   }
 ];
