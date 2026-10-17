@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import SpotDrawer from "@/components/SpotDrawer";
 import TidePanel from "@/components/TidePanel";
 import {
@@ -190,16 +191,26 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-[#fbf7ef] text-slate-800">
       <header className="relative overflow-hidden px-5 pb-6 pt-10 sm:px-10">
         <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[48rem] -translate-x-1/2 rounded-full bg-sky-200/60 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-sky-600">
-            <Waves className="h-4 w-4" /> 沖縄スキンダイビング
-          </p>
-          <h1 className="mt-2 bg-gradient-to-r from-sky-700 via-cyan-600 to-teal-500 bg-clip-text text-3xl font-extrabold text-transparent sm:text-5xl">
-            海中うねり（底揺れ）予報
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-slate-500">
-            Open-Meteo Marine のうねりデータに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、水中で体が振られる幅を算出します。
-          </p>
+        <div className="relative mx-auto flex max-w-6xl items-center gap-4 sm:gap-5">
+          <Image
+            src="/icon.png"
+            alt="沖縄スキンダイビング アイコン"
+            width={80}
+            height={80}
+            priority
+            className="h-14 w-14 shrink-0 rounded-full shadow-md ring-2 ring-white sm:h-20 sm:w-20"
+          />
+          <div>
+            <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-sky-600">
+              <Waves className="h-4 w-4" /> 沖縄スキンダイビング
+            </p>
+            <h1 className="mt-1 bg-gradient-to-r from-sky-700 via-cyan-600 to-teal-500 bg-clip-text text-2xl font-extrabold text-transparent sm:mt-2 sm:text-5xl">
+              海中うねり（底揺れ）予報
+            </h1>
+            <p className="mt-2 max-w-2xl text-xs text-slate-500 sm:mt-3 sm:text-sm">
+              Open-Meteo Marine のうねりデータに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、水中で体が振られる幅を算出します。
+            </p>
+          </div>
         </div>
       </header>
 

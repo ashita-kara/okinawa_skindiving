@@ -13,8 +13,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://okinawa-dive-surge.vercel.app"),
   title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
-  description: "沖縄32ポイントの底揺れ（サージ）をうねり・地形・水深から算出するスキンダイバー向け予報",
+  description: "沖縄32ポイントの底揺れ（サージ）をうねり・地形・水深・潮位から算出するスキンダイバー向け予報",
+  openGraph: {
+    title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
+    description: "沖縄32ポイントの底揺れ（サージ）をうねり・地形・水深・潮位から算出するスキンダイバー向け予報",
+    images: ["/icon.png"],
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
+    description: "沖縄32ポイントの底揺れ（サージ）をうねり・地形・水深・潮位から算出するスキンダイバー向け予報",
+    images: ["/icon.png"],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
