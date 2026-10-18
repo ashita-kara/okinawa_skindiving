@@ -632,5 +632,33 @@ export const DIVE_POINTS: DivePoint[] = [
     reefProtection: 0.45,
     hasOuterReef: false,
     note: "南東向きでウミガメの遭遇率が極めて高い。北〜北西の風・うねりに強い。"
+  },
+  {
+    id: "kushibaru",
+    name: "クシバルビーチ（阿嘉島）",
+    yomi: "くしばるびーち",
+    area: "慶良間",
+    lat: 26.203323,
+    lon: 127.266981,
+    targetDepth: 5.0,
+    openDirection: 315,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    note: "阿嘉島北西側の手つかずの天然ビーチ。サンゴの群生が素晴らしいが、外洋に面しているため北〜西うねりと離岸流に注意。"
+  },
+  {
+    id: "adeku",
+    name: "アデクビーチ（慶留間島）",
+    yomi: "あでくびーち",
+    area: "慶良間",
+    lat: 26.180196,
+    lon: 127.295194,
+    targetDepth: 4.0,
+    openDirection: 75,
+    openAngleWidth: 65,
+    reefProtection: 0.45,
+    hasOuterReef: false,
+    note: "阿嘉大橋の下・慶留間島北東側の静かなビーチ。西〜南西風には強いが、橋周辺の海峡を流れる潮流（カレント）と東寄りのうねりに注意。"
   }
 ];
