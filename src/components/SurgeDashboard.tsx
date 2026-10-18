@@ -189,9 +189,9 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-[#fbf7ef] text-slate-800">
-      <header className="relative overflow-hidden px-5 pb-6 pt-10 sm:px-10">
+      <header className="relative overflow-hidden pb-6 pt-10">
         <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[48rem] -translate-x-1/2 rounded-full bg-sky-200/60 blur-3xl" />
-        <div className="relative mx-auto flex max-w-6xl items-center gap-4 sm:gap-5">
+        <div className="relative mx-auto flex max-w-6xl items-center gap-4 px-5 sm:gap-5 sm:px-10">
           <Image
             src="/icon.png"
             alt="沖縄スキンダイビング アイコン"

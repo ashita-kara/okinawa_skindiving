@@ -130,8 +130,36 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     note: "南〜南東のうねりに敏感。リーフエッジ付近は潮通しと引き換えに波の押し引きが強まる。"
   },
+  {
+    id: "gushikawa-castle",
+    name: "具志川城跡下",
+    yomi: "ぐしかわじょうあとした",
+    area: "南部",
+    lat: 26.077771,
+    lon: 127.663887,
+    targetDepth: 6.0,
+    openDirection: 205,
+    openAngleWidth: 85,
+    reefProtection: 0.15,
+    hasOuterReef: false,
+    note: "喜屋武岬西側の断崖下に広がるダイナミックな地形ポイント。北〜北東風には強いが、南〜西うねりが入ると岩場のエントリー・エキジットが危険になる。"
+  },
+  {
+    id: "giza-banta",
+    name: "ギーザバンタ（慶座絶壁）",
+    yomi: "ぎーざばんた",
+    area: "南部",
+    lat: 26.099485,
+    lon: 127.736346,
+    targetDepth: 6.0,
+    openDirection: 155,
+    openAngleWidth: 80,
+    reefProtection: 0.20,
+    hasOuterReef: false,
+    note: "南東向きに開けた絶壁下の海域。北風には滅法強いが、太平洋からの南〜東うねりが入る日は底揺れとリーフ際の引き波が強まる。"
+  },
 
-  // ================= 中部（北谷・読谷） =================
+  // ================= 中部（北谷・読谷・うるま） =================
   {
     id: "sunabe-no1",
     name: "砂辺（宮城海岸）",
@@ -190,6 +218,20 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     note: "【上級者向け】外洋直結のドロップオフ。北うねり・北風の影響をダイレクトに受け、岩場のエントリー・エキジットはうねりがある日は危険。"
   },
+  {
+    id: "miyagijima",
+    name: "宮城島（アクナ浜/ウクの浜）",
+    yomi: "みやぎじま",
+    area: "中部",
+    lat: 26.363907,
+    lon: 127.997235,
+    targetDepth: 5.0,
+    openDirection: 100,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    note: "太平洋に面した東海岸ポイント。西〜北西風の日に風裏となり穏やかになるが、東〜南東の太平洋うねりと離岸流に注意。"
+  },
 
   // ================= 恩納村 =================
   {
@@ -207,6 +249,20 @@ export const DIVE_POINTS: DivePoint[] = [
     note: "北〜北東うねりに極めて敏感。少しでも周期の長い北うねりが入ると階段口で強い引き波が発生。"
   },
   {
+    id: "ura-maeda",
+    name: "裏真栄田クレバス",
+    yomi: "うらまえだくればす",
+    area: "恩納村",
+    lat: 26.445939,
+    lon: 127.769508,
+    targetDepth: 5.0,
+    openDirection: 300,
+    openAngleWidth: 75,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    note: "真栄田岬の北西側（裏真栄田）にあるクレバス地形ポイント。北東風は岬の陰でかわしやすいが、西〜北西うねりが入ると水路内で底揺れ（サージ）が強まる。"
+  },
+  {
     id: "yamada",
     name: "山田ポイント（谷川）",
     yomi: "やまだぽいんと",
@@ -219,6 +275,20 @@ export const DIVE_POINTS: DivePoint[] = [
     reefProtection: 0.40,
     hasOuterReef: false,
     note: "真栄田岬のすぐ隣だが遠浅の地形に守られており、真栄田よりうねりが一段階抑えられる。"
+  },
+  {
+    id: "tancha",
+    name: "谷茶",
+    yomi: "たんちゃ",
+    area: "恩納村",
+    lat: 26.473697,
+    lon: 127.812181,
+    targetDepth: 4.5,
+    openDirection: 315,
+    openAngleWidth: 70,
+    reefProtection: 0.45,
+    hasOuterReef: false,
+    note: "遠浅のリーフと砂地が広がる恩納村中部のビーチ。南〜東風の日は穏やかだが、北西うねりが強い日は沖のリーフ切れ目の流れに注意。"
   },
   {
     id: "apogama",
@@ -263,7 +333,7 @@ export const DIVE_POINTS: DivePoint[] = [
     note: "沖のリーフパッチに魚影が濃い。北西のうねりが強い日は流れと揺れに注意。"
   },
 
-  // ================= 名護・本部 =================
+  // ================= 名護・本部・今帰仁 =================
   {
     id: "awa",
     name: "石切（安和）",
@@ -363,8 +433,78 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     note: "抜群の透明度を誇る離島。周囲が外洋に囲まれているため周期の長いうねりに敏感。"
   },
+  {
+    id: "nagahama-nakijin",
+    name: "長浜",
+    yomi: "ながはま",
+    area: "名護・本部",
+    lat: 26.711282,
+    lon: 127.946295,
+    targetDepth: 4.5,
+    openDirection: 0,
+    openAngleWidth: 70,
+    reefProtection: 0.40,
+    hasOuterReef: false,
+    note: "今帰仁村の北向き海岸。南〜南西風の夏場は穏やかでサンゴが美しいが、北〜北東うねりが入る日は波が立ちやすい。"
+  },
+  {
+    id: "kourijima",
+    name: "古宇利島（ティーヌ浜/トケイ浜）",
+    yomi: "こうりじま",
+    area: "名護・本部",
+    lat: 26.715925,
+    lon: 128.014803,
+    targetDepth: 4.5,
+    openDirection: 350,
+    openAngleWidth: 75,
+    reefProtection: 0.35,
+    hasOuterReef: false,
+    note: "古宇利島北端の天然ビーチ。南風の日は透明度抜群で穏やかになるが、外洋に面しているため北西〜北東のうねりに敏感。"
+  },
+  {
+    id: "teniya-beach",
+    name: "天仁屋海岸",
+    yomi: "てにやかいがん",
+    area: "名護・本部",
+    lat: 26.563968,
+    lon: 128.142832,
+    targetDepth: 5.0,
+    openDirection: 125,
+    openAngleWidth: 70,
+    reefProtection: 0.35,
+    hasOuterReef: false,
+    note: "名護市東海岸（太平洋側）の静かな海岸。北西〜西風の日は本部半島・やんばるの山が風を遮るが、太平洋からの東〜南東うねりに注意。"
+  },
+  {
+    id: "teniya-zaki",
+    name: "天仁屋崎",
+    yomi: "てにやざき",
+    area: "名護・本部",
+    lat: 26.565146,
+    lon: 128.155225,
+    targetDepth: 6.5,
+    openDirection: 110,
+    openAngleWidth: 85,
+    reefProtection: 0.15,
+    hasOuterReef: false,
+    note: "太平洋に突き出た天仁屋崎の先端域。潮通しが良くダイナミックな反面、東〜南東のうねりや岬先端のカレント（潮流）をダイレクトに受ける。"
+  },
 
   // ================= 国頭・北部 =================
+  {
+    id: "nagahama-higashi",
+    name: "ながはま海岸",
+    yomi: "ながはまかいがん",
+    area: "国頭・北部",
+    lat: 26.620621,
+    lon: 128.183614,
+    targetDepth: 5.0,
+    openDirection: 120,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    note: "東村の太平洋側ポイント。西〜北西風の日は風裏となり穏やかだが、太平洋側の東〜南東うねりが入る日は底揺れと引き波に注意。"
+  },
   {
     id: "hentona",
     name: "辺土名",

@@ -74,9 +74,10 @@ async function fetchJsonWithRetry<T>(url: string, label: string, retries = 3): P
  * - 海況: Marine API に1回
  * - 風:   Forecast API に1回
  */
-async function fetchMarineDataCached(): Promise<MarineResult> {
+async function fetchMarineDataCached(pointsSignature: string): Promise<MarineResult> {
   "use cache";
   cacheLife("hours");
+  void pointsSignature;
 
   // 約2km四方(小数点第2位)で同一の座標を統合し、APIコール数とURL長を削減
   const meshKeys: string[] = [];
@@ -170,8 +171,9 @@ async function fetchMarineDataCached(): Promise<MarineResult> {
  * "use cache" 関数の中で例外を投げさせ、外側でキャッチする。
  */
 export async function fetchMarineData(): Promise<MarineResult> {
+  const sig = DIVE_POINTS.map((p) => `${p.id}:${p.lat.toFixed(3)},${p.lon.toFixed(3)}`).join("|");
   try {
-    return await fetchMarineDataCached();
+    return await fetchMarineDataCached(sig);
   } catch (e) {
     return {
       byPointId: {},
