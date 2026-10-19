@@ -60,7 +60,17 @@ export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props)
   }
 
   const day = tide.days[activeDay];
-  const nextDay = tide.days[addDays(activeDay, 1)];
+  const prevDayKey = addDays(activeDay, -1);
+  const nextDayKey = addDays(activeDay, 1);
+  const hasPrevDay = !!tide.days[prevDayKey];
+  const hasNextDay = !!tide.days[nextDayKey];
+  const nextDay = tide.days[nextDayKey];
+
+  const goDay = (targetDay: string) => {
+    if (!tide.days[targetDay]) return;
+    setMonthOverride(null);
+    pickDay(targetDay);
+  };
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
@@ -71,9 +81,33 @@ export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props)
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <p className="text-xs text-slate-500">{tide.station}（気象庁 潮位表）</p>
-                <h2 className="text-xl font-bold text-slate-800">
-                  {Number(activeDay.slice(5, 7))}月{Number(activeDay.slice(8, 10))}日（{weekdayJa(activeDay)}）
-                </h2>
+                <div className="mt-0.5 flex items-center gap-1 sm:gap-1.5">
+                  <button
+                    id="tide-prev-day"
+                    type="button"
+                    onClick={() => goDay(prevDayKey)}
+                    disabled={!hasPrevDay}
+                    aria-label="前日の潮汐"
+                    title="前日へ"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <h2 className="min-w-[7.5rem] text-center text-xl font-bold text-slate-800">
+                    {Number(activeDay.slice(5, 7))}月{Number(activeDay.slice(8, 10))}日（{weekdayJa(activeDay)}）
+                  </h2>
+                  <button
+                    id="tide-next-day"
+                    type="button"
+                    onClick={() => goDay(nextDayKey)}
+                    disabled={!hasNextDay}
+                    aria-label="翌日の潮汐"
+                    title="翌日へ"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className={`rounded-full px-3 py-1 font-bold ${TIDE_NAME_STYLE[day.tideName]}`}>{day.tideName}</span>
@@ -96,6 +130,43 @@ export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props)
               }}
               clickable={forecastDays.has(activeDay)}
             />
+
+            {/* 日めくりバー（グラフ直下） */}
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-2xl bg-sky-50/70 p-1.5 ring-1 ring-sky-100">
+              <button
+                type="button"
+                onClick={() => goDay(prevDayKey)}
+                disabled={!hasPrevDay}
+                className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
+              >
+                <ChevronLeft className="h-4 w-4 shrink-0" />
+                <span>
+                  前日（{Number(prevDayKey.slice(5, 7))}/{Number(prevDayKey.slice(8, 10))} {weekdayJa(prevDayKey)}）
+                </span>
+              </button>
+
+              {times[0] && activeDay !== times[0].slice(0, 10) && (
+                <button
+                  type="button"
+                  onClick={() => goDay(times[0].slice(0, 10))}
+                  className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-sky-700"
+                >
+                  今日へ戻る
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => goDay(nextDayKey)}
+                disabled={!hasNextDay}
+                className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
+              >
+                <span>
+                  翌日（{Number(nextDayKey.slice(5, 7))}/{Number(nextDayKey.slice(8, 10))} {weekdayJa(nextDayKey)}）
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0" />
+              </button>
+            </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[...day.highs.map((e) => ({ ...e, kind: "満潮" as const })), ...day.lows.map((e) => ({ ...e, kind: "干潮" as const }))]
