@@ -16,9 +16,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://okinawa-dive-surge.vercel.app"),
   title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
   description: "沖縄44ポイントの底揺れ（サージ）をうねり・地形・水深・潮位から算出するスキンダイバー向け予報",
+  alternates: {
+    canonical: "https://okinawa-dive-surge.vercel.app/",
+  },
   openGraph: {
     title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
     description: "沖縄44ポイントの底揺れ（サージ）をうねり・地形・水深・潮位から算出するスキンダイバー向け予報",
+    url: "https://okinawa-dive-surge.vercel.app/",
+    siteName: "沖縄スキンダイビング 海中うねり予報",
     images: ["/icon.png"],
     locale: "ja_JP",
     type: "website",
