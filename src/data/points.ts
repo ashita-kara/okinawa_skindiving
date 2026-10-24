@@ -782,6 +782,22 @@ export const DIVE_POINTS: DivePoint[] = [
     note: "今帰仁村の北向き海岸。南〜南西風の夏場は穏やかでサンゴが美しいが、北〜北東うねりが入る日は波が立ちやすい。"
   },
   {
+    id: "usabama",
+    name: "ウサバマ",
+    yomi: "うさばま",
+    area: "名護・本部",
+    lat: 26.707442,
+    lon: 127.963247,
+    targetDepth: 4.5,
+    openDirection: 20,
+    openAngleWidth: 70,
+    reefProtection: 0.40,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "今帰仁村・長浜東隣の北北東向き天然ビーチ。南〜南西風の日は風裏で穏やかになるが、北〜北東うねりとリーフ切れ目のカレントに注意。"
+  },
+  {
     id: "kourijima",
     name: "古宇利島（ティーヌ浜/トケイ浜）",
     yomi: "こうりじま",
