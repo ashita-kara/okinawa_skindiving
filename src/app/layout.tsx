@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://okinawa-dive-surge.vercel.app"),
   title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
-  description: "沖縄本島・慶良間・宮古・石垣83ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
+  description: "沖縄本島・慶良間・宮古・石垣84ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
   alternates: {
     canonical: "https://okinawa-dive-surge.vercel.app/",
   },
   openGraph: {
     title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
-    description: "沖縄本島・慶良間・宮古・石垣83ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
+    description: "沖縄本島・慶良間・宮古・石垣84ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
     url: "https://okinawa-dive-surge.vercel.app/",
     siteName: "沖縄スキンダイビング 海中うねり予報",
     images: ["/icon.png"],
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "沖縄スキンダイビング 海中うねり（底揺れ）予報",
-    description: "沖縄本島・慶良間・宮古・石垣83ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
+    description: "沖縄本島・慶良間・宮古・石垣84ポイントの底揺れ（サージ）と濁り・透明度をうねり・地形・水深・潮位・雨量から算出するスキンダイバー向け予報",
     images: ["/icon.png"],
   },
 };

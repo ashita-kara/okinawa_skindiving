@@ -229,6 +229,22 @@ export const DIVE_POINTS: DivePoint[] = [
     note: "南向きの遠浅リーフの海岸。北風の日は穏やかだが、南うねりが入る日や下げ潮時はリーフの切れ目からの離岸流に注意。"
   },
   {
+    id: "suicide",
+    name: "スーサイド",
+    yomi: "すーさいど",
+    area: "南部",
+    lat: 26.081834,
+    lon: 127.693315,
+    targetDepth: 5.0,
+    openDirection: 180,
+    openAngleWidth: 80,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "米須海岸西側の南向きリーフエッジ海域。北風には強いが、外洋の南うねりがダイレクトに入りやすく、リーフ切れ目の強い離岸流（カレント）と波に注意。"
+  },
+  {
     id: "gushichan-hama",
     name: "ぐしちゃん浜",
     yomi: "ぐしちゃんはま",
