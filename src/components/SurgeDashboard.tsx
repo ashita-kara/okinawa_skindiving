@@ -28,7 +28,7 @@ const SurgeMap = dynamic(() => import("@/components/SurgeMap"), {
 type Tab = "すべて" | "お気に入り" | AreaCategory;
 type View = "list" | "map" | "tide";
 
-const TABS: Tab[] = ["すべて", "お気に入り", "南部", "中部", "恩納村", "名護・本部", "国頭・北部", "慶良間"];
+const TABS: Tab[] = ["すべて", "お気に入り", "南部", "中部", "恩納村", "名護・本部", "国頭・北部", "慶良間", "宮古", "石垣"];
 const FAV_KEY = "okinawa-skindiving:favorites:v1";
 
 const STATUS_STYLE: Record<SwellEvaluation["status"], { badge: string; bar: string; glow: string }> = {

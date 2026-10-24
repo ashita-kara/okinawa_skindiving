@@ -102,35 +102,42 @@ async function fetchMarineDataCached(pointsSignature: string): Promise<MarineRes
     pointToMeshIdx.push(idx);
   });
 
-  const lats = meshCoords.map((c) => c.lat).join(",");
-  const lons = meshCoords.map((c) => c.lon).join(",");
-  const common = `latitude=${lats}&longitude=${lons}&timezone=Asia%2FTokyo&forecast_days=3`;
-
-  const marineUrl =
-    `https://marine-api.open-meteo.com/v1/marine?${common}` +
-    `&hourly=wave_height,wind_wave_height,swell_wave_height,swell_wave_direction,swell_wave_period`;
-  const windUrl =
-    `https://api.open-meteo.com/v1/forecast?${common}&past_days=1` +
-    `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&wind_speed_unit=ms`;
-
-  const marineRaw = await fetchJsonWithRetry<MarineLocation | MarineLocation[]>(
-    marineUrl,
-    "Open-Meteo Marine"
-  );
-  const marine = asList(marineRaw);
-
-  // 風の取得失敗は致命的にしない（海況は表示を続ける）
-  let wind: WindLocation[] = [];
+  const CHUNK_SIZE = 40;
+  const marine: MarineLocation[] = [];
+  const wind: WindLocation[] = [];
   let windError: string | undefined;
-  try {
-    const windRaw = await fetchJsonWithRetry<WindLocation | WindLocation[]>(
-      windUrl,
-      "Open-Meteo Forecast",
-      2
+
+  for (let offset = 0; offset < meshCoords.length; offset += CHUNK_SIZE) {
+    const chunk = meshCoords.slice(offset, offset + CHUNK_SIZE);
+    const lats = chunk.map((c) => c.lat).join(",");
+    const lons = chunk.map((c) => c.lon).join(",");
+    const common = `latitude=${lats}&longitude=${lons}&timezone=Asia%2FTokyo&forecast_days=3`;
+
+    const marineUrl =
+      `https://marine-api.open-meteo.com/v1/marine?${common}` +
+      `&hourly=wave_height,wind_wave_height,swell_wave_height,swell_wave_direction,swell_wave_period`;
+    const windUrl =
+      `https://api.open-meteo.com/v1/forecast?${common}&past_days=1` +
+      `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&wind_speed_unit=ms`;
+
+    const marineRaw = await fetchJsonWithRetry<MarineLocation | MarineLocation[]>(
+      marineUrl,
+      "Open-Meteo Marine"
     );
-    wind = asList(windRaw);
-  } catch (e) {
-    windError = e instanceof Error ? e.message : "風データ取得失敗";
+    marine.push(...asList(marineRaw));
+
+    // 風・雨量の取得失敗は致命的にしない（海況は表示を続ける）
+    try {
+      const windRaw = await fetchJsonWithRetry<WindLocation | WindLocation[]>(
+        windUrl,
+        "Open-Meteo Forecast",
+        2
+      );
+      wind.push(...asList(windRaw));
+    } catch (e) {
+      windError = e instanceof Error ? e.message : "風データ取得失敗";
+      wind.push(...chunk.map(() => ({})));
+    }
   }
 
   const byPointId: Record<string, PointHourly> = {};
