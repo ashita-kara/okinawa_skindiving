@@ -15,6 +15,10 @@ export interface DivePoint {
   reefProtection: number;   // リーフ減衰率 (0.0=外洋直結 〜 0.85=イノー内保護)
   hasOuterReef: boolean;    // 干潮時にうねりを遮断するアウターリーフの有無
   reefThresholdCm?: number; // アウターリーフが防波堤として効き始める潮位(cm)。設定ありのポイントはリーフ型として離岸流判定の対象
+  /** 底質（砂の舞いやすさ）: rock=岩礁・ドロップオフ / coral_sand=サンゴ砂・リーフ / fine_sand=細かい砂・シルト */
+  bottomType: "rock" | "coral_sand" | "fine_sand";
+  /** 雨のときの河川・排水・淡水流入の影響度 */
+  riverImpact: "none" | "low" | "high";
   note: string;             // カレント・濁り・地形の固定アドバイス
 }
 
@@ -33,6 +37,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.75,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     reefThresholdCm: 120,
     note: "最も浅くリーフに守られたエリア。干潮前後は外洋のうねりをほぼ完全にブロックする。"
   },
@@ -49,6 +55,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.65,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     reefThresholdCm: 105,
     note: "熱帯魚が多いメインのイノー。満潮時で南うねりが強い日は水路から流れが入るので注意。"
   },
@@ -65,6 +73,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.55,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     reefThresholdCm: 90,
     note: "沖のリーフ切れ目に近く、下げ潮時は沖向きのカレント（離岸流）が発生しやすい。"
   },
@@ -81,6 +91,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.50,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     reefThresholdCm: 80,
     note: "外洋との水交換が良く透明度が高い分、うねりがある日は流れと揺れが入りやすい。"
   },
@@ -97,6 +109,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 85,
     reefProtection: 0.05,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。"
   },
   {
@@ -112,6 +126,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.70,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     reefThresholdCm: 100,
     note: "北風に強い南部の定番ビーチ。インリーフは浅く穏やかで初心者や練習にも適する。"
   },
@@ -128,6 +144,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.10,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "low",
     note: "南〜南東のうねりに敏感。リーフエッジ付近は潮通しと引き換えに波の押し引きが強まる。"
   },
   {
@@ -142,6 +160,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 85,
     reefProtection: 0.15,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "喜屋武岬西側の断崖下に広がるダイナミックな地形ポイント。北〜北東風には強いが、南〜西うねりが入ると岩場のエントリー・エキジットが危険になる。"
   },
   {
@@ -156,7 +176,105 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.20,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "南東向きに開けた絶壁下の海域。北風には滅法強いが、太平洋からの南〜東うねりが入る日は底揺れとリーフ際の引き波が強まる。"
+  },
+  {
+    id: "kyan-misaki",
+    name: "喜屋武崎",
+    yomi: "きゃんみさき",
+    area: "南部",
+    lat: 26.080060,
+    lon: 127.653171,
+    targetDepth: 7.0,
+    openDirection: 200,
+    openAngleWidth: 100,
+    reefProtection: 0.05,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "【上級者向け】本島最南端の岬先端。東〜西の広い範囲からうねりを受け、岬周りは潮流も速い。北寄りの風でベタ凪の日限定。"
+  },
+  {
+    id: "kita-nashiro",
+    name: "北名城",
+    yomi: "きたなしろ",
+    area: "南部",
+    lat: 26.109194,
+    lon: 127.648897,
+    targetDepth: 4.0,
+    openDirection: 270,
+    openAngleWidth: 75,
+    reefProtection: 0.35,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "糸満西海岸の浅いリーフが広がるエリア。東風の日は穏やかだが、西〜北西うねりが入るとリーフの切れ目で流れが出やすい。"
+  },
+  {
+    id: "komesu",
+    name: "米須海岸",
+    yomi: "こめすかいがん",
+    area: "南部",
+    lat: 26.084569,
+    lon: 127.698317,
+    targetDepth: 3.5,
+    openDirection: 180,
+    openAngleWidth: 70,
+    reefProtection: 0.45,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "南向きの遠浅リーフの海岸。北風の日は穏やかだが、南うねりが入る日や下げ潮時はリーフの切れ目からの離岸流に注意。"
+  },
+  {
+    id: "gushichan-hama",
+    name: "ぐしちゃん浜",
+    yomi: "ぐしちゃんはま",
+    area: "南部",
+    lat: 26.114632,
+    lon: 127.748574,
+    targetDepth: 3.5,
+    openDirection: 150,
+    openAngleWidth: 70,
+    reefProtection: 0.45,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "八重瀬町の南東向き天然ビーチ。奇岩と遠浅のイノーが広がり北風に強いが、南〜東うねりが入る日や下げ潮時のリーフ切れ目の流れに注意。"
+  },
+  {
+    id: "chinen-misaki",
+    name: "知念岬",
+    yomi: "ちねんみさき",
+    area: "南部",
+    lat: 26.169337,
+    lon: 127.832485,
+    targetDepth: 6.5,
+    openDirection: 120,
+    openAngleWidth: 95,
+    reefProtection: 0.15,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "太平洋に突き出た知念半島の岬周辺。潮通しが良く透明度は高いが、東〜南うねりと岬周りの速い潮流（カレント）に注意。"
+  },
+  {
+    id: "china-zaki",
+    name: "知名崎",
+    yomi: "ちなざき",
+    area: "南部",
+    lat: 26.191487,
+    lon: 127.828776,
+    targetDepth: 5.0,
+    openDirection: 75,
+    openAngleWidth: 80,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "知念半島北東側（中城湾入口）のポイント。西〜南西風の日は風裏で穏やかになるが、北東〜東うねりに注意。"
   },
 
   // ================= 中部（北谷・読谷・うるま） =================
@@ -173,6 +291,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.20,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "high",
     note: "宮城海岸の北側エントリー口。ソフトコーラル（お花畑）の群生地。西〜北西うねりが入ると階段口で波が立つ。"
   },
   {
@@ -188,6 +308,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.25,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "high",
     note: "宮城海岸の南側エントリー口。東風の日にベタ凪になる。比謝川が近いため大雨の翌日は赤土・排水による濁りに注意。"
   },
   {
@@ -202,6 +324,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "読谷村北東向き海岸。リーフエッジまで距離があり浅場は守られているが、干潮時は水深が浅くなりすぎる点に注意。"
   },
   {
@@ -216,6 +340,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.05,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "【上級者向け】外洋直結のドロップオフ。北うねり・北風の影響をダイレクトに受け、岩場のエントリー・エキジットはうねりがある日は危険。"
   },
   {
@@ -230,7 +356,73 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.30,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "太平洋に面した東海岸ポイント。西〜北西風の日に風裏となり穏やかになるが、東〜南東の太平洋うねりと離岸流に注意。"
+  },
+  {
+    id: "higashi-no-hama",
+    name: "東の浜（伊計島）",
+    yomi: "ひがしのはま",
+    area: "中部",
+    lat: 26.385809,
+    lon: 128.003748,
+    targetDepth: 5.0,
+    openDirection: 90,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "伊計島の東向き海岸。西風の日は風裏で穏やかだが、太平洋からの東〜北東うねりを直接受ける。"
+  },
+  {
+    id: "mizugama",
+    name: "水釜",
+    yomi: "みずがま",
+    area: "中部",
+    lat: 26.359075,
+    lon: 127.737806,
+    targetDepth: 5.0,
+    openDirection: 270,
+    openAngleWidth: 75,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "high",
+    note: "嘉手納の西向き海岸。東風の日は穏やかだが、西〜北西うねりが入ると護岸付近で波が立つ。比謝川に近く大雨後は濁りやすい。"
+  },
+  {
+    id: "momenbaru",
+    name: "木綿原",
+    yomi: "もめんばる",
+    area: "中部",
+    lat: 26.366843,
+    lon: 127.726460,
+    targetDepth: 5.0,
+    openDirection: 265,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "high",
+    note: "読谷・渡具知の西向き海岸。東風の日に穏やかになる。西うねりが入るとリーフの切れ目で流れと底揺れが出やすい。"
+  },
+  {
+    id: "yomitan-hakaba",
+    name: "読谷墓場前",
+    yomi: "よみたんはかばまえ",
+    area: "中部",
+    lat: 26.405667,
+    lon: 127.710724,
+    targetDepth: 5.0,
+    openDirection: 270,
+    openAngleWidth: 80,
+    reefProtection: 0.20,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "low",
+    note: "読谷西海岸の地形ポイント。東風の日は穏やかだが、西〜北西うねりの影響を受けやすく岩場のエントリーに注意。"
   },
 
   // ================= 恩納村 =================
@@ -246,6 +438,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.10,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "北〜北東うねりに極めて敏感。少しでも周期の長い北うねりが入ると階段口で強い引き波が発生。"
   },
   {
@@ -260,6 +454,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.25,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "真栄田岬の北西側（裏真栄田）にあるクレバス地形ポイント。北東風は岬の陰でかわしやすいが、西〜北西うねりが入ると水路内で底揺れ（サージ）が強まる。"
   },
   {
@@ -274,6 +470,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.40,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "真栄田岬のすぐ隣だが遠浅の地形に守られており、真栄田よりうねりが一段階抑えられる。"
   },
   {
@@ -288,6 +486,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "遠浅のリーフと砂地が広がる恩納村中部のビーチ。南〜東風の日は穏やかだが、北西うねりが強い日は沖のリーフ切れ目の流れに注意。"
   },
   {
@@ -302,7 +502,25 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.15,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "地形とドロップオフが魅力。北西うねりが入ると岩場のエントリー・エキジットが危険になる。"
+  },
+  {
+    id: "hoshu",
+    name: "ホーシュー",
+    yomi: "ほーしゅー",
+    area: "恩納村",
+    lat: 26.504902,
+    lon: 127.842988,
+    targetDepth: 6.0,
+    openDirection: 315,
+    openAngleWidth: 75,
+    reefProtection: 0.20,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "アポガマ北側の地形ポイント。南〜東風の日は穏やかだが、北西うねりが入ると岩場のエントリー・エキジットが危険になる。"
   },
   {
     id: "nakayukui",
@@ -316,6 +534,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.50,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "旧ダイヤモンドビーチ／アカティーダバンタ一帯（同一予報メッシュのため統合）。砂地とサンゴが美しいが、北西〜北東うねりに注意。"
   },
   {
@@ -330,6 +550,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "沖のリーフパッチに魚影が濃い。北西のうねりが強い日は流れと揺れに注意。"
   },
 
@@ -346,6 +568,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 55,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "high",
     note: "本部半島が北風・北うねりを完全にブロックするため、冬場の北風強風時に極めて強い。"
   },
   {
@@ -360,6 +584,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 50,
     reefProtection: 0.50,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "high",
     note: "北うねりに強い名護湾奥の避難ポイント。南西うねりが入る日のみ底揺れと濁りが出る。"
   },
   {
@@ -374,6 +600,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 45,
     reefProtection: 0.60,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "low",
     note: "冬の北風に圧倒的に強い定番スポット。砂地のため南西うねり時のみ巻き上げで濁る。"
   },
   {
@@ -388,6 +616,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 38,
     reefProtection: 0.55,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "瀬底島・本部半島・北側の浅根群に守られ基本的にうねりを受けにくい。伊江水道の隙間（北北西）からの強いうねりと、海峡の大潮カレントに注意。"
   },
   {
@@ -402,6 +632,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.25,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "地形（クレバス・洞窟）ポイント。西〜北西うねりが入ると水路内で強い底揺れ（サージ）が発生。"
   },
   {
@@ -416,6 +648,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.50,
     hasOuterReef: true,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     reefThresholdCm: 85,
     note: "北西に突き出た岬。潮位85cm以下まで引くと周囲のリーフで遮断され穏やかになるが、満潮からの下げ潮時は先端周辺で速い潮流が出るため要注意。"
   },
@@ -431,7 +665,105 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.20,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "抜群の透明度を誇る離島。周囲が外洋に囲まれているため周期の長いうねりに敏感。"
+  },
+  {
+    id: "sesoko-tail",
+    name: "瀬底のしっぽ",
+    yomi: "せそこのしっぽ",
+    area: "名護・本部",
+    lat: 26.626927,
+    lon: 127.861960,
+    targetDepth: 5.0,
+    openDirection: 180,
+    openAngleWidth: 135,
+    reefProtection: 0.15,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "瀬底島南端の尖った岬の先。ほぼ全方位からうねりを受け、特に北西〜南東（島の西側〜南側）や瀬底大橋を抜けるうねりの影響が強い。西側は浅瀬。"
+  },
+  {
+    id: "yamakawa",
+    name: "山川海岸",
+    yomi: "やまかわかいがん",
+    area: "名護・本部",
+    lat: 26.679804,
+    lon: 127.877977,
+    targetDepth: 5.0,
+    openDirection: 285,
+    openAngleWidth: 70,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "本部半島西岸の海岸。東風の日は穏やか。伊江島がやや盾になるが、西〜北西うねりが入る日は底揺れに注意。"
+  },
+  {
+    id: "aquapolis",
+    name: "アクアポリス",
+    yomi: "あくあぽりす",
+    area: "名護・本部",
+    lat: 26.684697,
+    lon: 127.871958,
+    targetDepth: 6.0,
+    openDirection: 285,
+    openAngleWidth: 75,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "海洋博公園南側の西向きエリア。東風の日は穏やかだが、西〜北西うねりの影響を受けやすい。"
+  },
+  {
+    id: "ie-wajii",
+    name: "湧出（伊江島）",
+    yomi: "わじー",
+    area: "名護・本部",
+    lat: 26.7345911,
+    lon: 127.7896478,
+    targetDepth: 7.0,
+    openDirection: 0,
+    openAngleWidth: 85,
+    reefProtection: 0.05,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "【上級者向け】伊江島北岸の断崖下。外洋直結で北〜北東うねりと北風を直接受ける。南風のベタ凪の日限定。"
+  },
+  {
+    id: "ie-nishizaki",
+    name: "西崎（伊江島）",
+    yomi: "にしざき",
+    area: "名護・本部",
+    lat: 26.7057563,
+    lon: 127.7586428,
+    targetDepth: 7.0,
+    openDirection: 270,
+    openAngleWidth: 100,
+    reefProtection: 0.05,
+    hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
+    note: "【上級者向け】伊江島西端の岬。北〜南西の広い範囲からうねりを受け、岬周りは潮流も速い。"
+  },
+  {
+    id: "ie-gi-beach",
+    name: "GIビーチ（伊江島）",
+    yomi: "じーあいびーち",
+    area: "名護・本部",
+    lat: 26.7018944,
+    lon: 127.7743787,
+    targetDepth: 4.5,
+    openDirection: 200,
+    openAngleWidth: 70,
+    reefProtection: 0.35,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
+    note: "伊江島南西岸のビーチ。北風の日は島が盾になり穏やかだが、南〜西うねりが入る日は底揺れに注意。"
   },
   {
     id: "nagahama-nakijin",
@@ -445,6 +777,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.40,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "今帰仁村の北向き海岸。南〜南西風の夏場は穏やかでサンゴが美しいが、北〜北東うねりが入る日は波が立ちやすい。"
   },
   {
@@ -459,6 +793,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.35,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "古宇利島北端の天然ビーチ。南風の日は透明度抜群で穏やかになるが、外洋に面しているため北西〜北東のうねりに敏感。"
   },
   {
@@ -473,6 +809,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.35,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "high",
     note: "名護市東海岸（太平洋側）の静かな海岸。北西〜西風の日は本部半島・やんばるの山が風を遮るが、太平洋からの東〜南東うねりに注意。"
   },
   {
@@ -487,6 +825,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 85,
     reefProtection: 0.15,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "太平洋に突き出た天仁屋崎の先端域。潮通しが良くダイナミックな反面、東〜南東のうねりや岬先端のカレント（潮流）をダイレクトに受ける。"
   },
 
@@ -503,6 +843,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.30,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
     note: "東村の太平洋側ポイント。西〜北西風の日は風裏となり穏やかだが、太平洋側の東〜南東うねりが入る日は底揺れと引き波に注意。"
   },
   {
@@ -517,6 +859,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.35,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "high",
     note: "東〜南東風の日に穏やかになるやんばる西海岸。冬場の北西季節風・うねりは直撃する。"
   },
   {
@@ -531,6 +875,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 80,
     reefProtection: 0.15,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "外洋に面したダイナミックな海域。北西のうねりが少しでもある日は底揺れが強く入る。"
   },
   {
@@ -545,6 +891,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 85,
     reefProtection: 0.05,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "辺戸岬手前の外洋直結スポット。リーフの遮蔽がほぼ無く、うねりと潮流の影響をダイレクトに受ける。"
   },
   {
@@ -559,7 +907,57 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 110,
     reefProtection: 0.0,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "【上級者限定】太平洋と東シナ海がぶつかる最北端。波浪・潮流ともに極めて強くベタ凪の日限定。"
+  },
+  {
+    id: "ada-beach",
+    name: "安田ビーチ",
+    yomi: "あだびーち",
+    area: "国頭・北部",
+    lat: 26.7442945,
+    lon: 128.3256407,
+    targetDepth: 4.5,
+    openDirection: 110,
+    openAngleWidth: 70,
+    reefProtection: 0.40,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "やんばる東海岸・安田の静かなリーフ内ビーチ。西〜北西風の日は風裏で穏やかだが、太平洋からの東うねりと水路のカレントに注意。"
+  },
+  {
+    id: "sosu-no-hama",
+    name: "楚洲の浜",
+    yomi: "そすのはま",
+    area: "国頭・北部",
+    lat: 26.7914594,
+    lon: 128.3226909,
+    targetDepth: 5.0,
+    openDirection: 85,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "low",
+    note: "国頭村東海岸の広大な天然浜。手つかずのサンゴが残る。西風の日は穏やかだが、東〜北東の太平洋うねりが直撃する日は波が立つ。"
+  },
+  {
+    id: "adan-beach",
+    name: "アダンビーチ",
+    yomi: "あだんびーち",
+    area: "国頭・北部",
+    lat: 26.8252083,
+    lon: 128.3160629,
+    targetDepth: 5.0,
+    openDirection: 75,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
+    note: "やんばる北東部の秘境ビーチ。西〜南西風の日に穏やかになるが、外洋の東〜北東うねりが入ると底揺れと離岸流が強まる。"
   },
 
   // ================= 慶良間（チービシ・座間味・阿嘉島） =================
@@ -575,6 +973,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 120,
     reefProtection: 0.25,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "遮る陸地が少ない環礁エリア。アンカリング場所の選び方で風は避けられるが周期の長いうねりは回り込む。"
   },
   {
@@ -589,6 +989,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.15,
     hasOuterReef: false,
+    bottomType: "rock",
+    riverImpact: "none",
     note: "座間味島北側のダイナミックな外洋ドロップオフ・地形ポイント。南〜南東風の夏場に穏やかになるが、北風・北うねりは直撃する。"
   },
   {
@@ -603,6 +1005,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.30,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "北東向き。南〜南西風の夏場は最高のケラマブルーになるが、北東風・北うねりの日は波が立つ。"
   },
   {
@@ -617,11 +1021,13 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 60,
     reefProtection: 0.55,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "南西向き。ニシバマが北風で荒れている日の完璧な風裏・避難ポイント。干潮時はかなり浅くなる。"
   },
   {
     id: "hijuishi",
-    name: "ヒジュイシビーチ（阿嘉島・阿嘉ビーチ）",
+    name: "ヒジュイシビーチ",
     yomi: "ひじゅいしびーち",
     area: "慶良間",
     lat: 26.172989,
@@ -631,6 +1037,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "南東向きでウミガメの遭遇率が極めて高い。北〜北西の風・うねりに強い。"
   },
   {
@@ -645,6 +1053,8 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 75,
     reefProtection: 0.30,
     hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "none",
     note: "阿嘉島北西側の手つかずの天然ビーチ。サンゴの群生が素晴らしいが、外洋に面しているため北〜西うねりと離岸流に注意。"
   },
   {
@@ -659,6 +1069,56 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.45,
     hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
     note: "阿嘉大橋の下・慶留間島北東側の静かなビーチ。西〜南西風には強いが、橋周辺の海峡を流れる潮流（カレント）と東寄りのうねりに注意。"
+  },
+  {
+    id: "aka-beach",
+    name: "阿嘉ビーチ（阿嘉島）",
+    yomi: "あかびーち",
+    area: "慶良間",
+    lat: 26.1917795,
+    lon: 127.2894846,
+    targetDepth: 4.0,
+    openDirection: 170,
+    openAngleWidth: 65,
+    reefProtection: 0.50,
+    hasOuterReef: false,
+    bottomType: "fine_sand",
+    riverImpact: "low",
+    note: "阿嘉集落前の南向きビーチ。北風に強く、慶留間島が前に構えるため比較的穏やか。南うねりと阿嘉大橋周辺の潮流に注意。"
+  },
+  {
+    id: "yuhina",
+    name: "ユヒナ浜（座間味島）",
+    yomi: "ゆひなはま",
+    area: "慶良間",
+    lat: 26.243649,
+    lon: 127.303245,
+    targetDepth: 5.0,
+    openDirection: 0,
+    openAngleWidth: 75,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
+    note: "座間味島北岸のビーチ。南風の夏場は穏やかだが、北風・北うねりの日は直接受ける。"
+  },
+  {
+    id: "nita",
+    name: "ニタ浜（座間味島）",
+    yomi: "にたはま",
+    area: "慶良間",
+    lat: 26.236456,
+    lon: 127.285406,
+    targetDepth: 5.0,
+    openDirection: 270,
+    openAngleWidth: 75,
+    reefProtection: 0.30,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
+    note: "座間味島西岸のビーチ。東風の日は穏やかだが、西〜北西うねりが入る日は波が立ちやすい。"
   }
 ];

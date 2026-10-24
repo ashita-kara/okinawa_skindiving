@@ -9,6 +9,11 @@ import {
   getAngleDiff,
   type SwellEvaluation,
 } from "@/lib/swellCalc";
+import {
+  calculateTurbidity,
+  TURBIDITY_META,
+  type TurbidityEvaluation,
+} from "@/lib/turbidityCalc";
 import type { PointHourly } from "@/lib/fetchMarineData";
 import { getTideInput, weekdayJa, type TideData } from "@/lib/tideCalc";
 
@@ -62,7 +67,10 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
         const sh = hourly.swellHeight[i] ?? null;
         const sp = hourly.swellPeriod[i] ?? null;
         const sd = hourly.swellDirection[i] ?? null;
+        const rain24h = hourly.past24hRainMm[i] ?? null;
         const tideIn = getTideInput(tide, t);
+        const ev = calculateUnderwaterSurge(sh, sp, sd, point, tideIn);
+        const tb = calculateTurbidity(point, ev.bottomSurgeCm, rain24h, tideIn.deltaCm, t);
         return {
           t,
           i,
@@ -76,7 +84,8 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
           tideCm: tideIn.tideCm,
           tideDelta: tideIn.deltaCm,
           surf: estimateSurfFace(sh, sp, sd, point),
-          ev: calculateUnderwaterSurge(sh, sp, sd, point, tideIn),
+          ev,
+          tb,
         };
       });
   }, [point, hourly, tide]);
@@ -89,13 +98,21 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
     if (!point || !hourly) return null;
     const t = hourly.time[hourIdx];
     const tideIn = getTideInput(tide, t);
-    return calculateUnderwaterSurge(
+    const ev = calculateUnderwaterSurge(
       hourly.swellHeight[hourIdx] ?? null,
       hourly.swellPeriod[hourIdx] ?? null,
       hourly.swellDirection[hourIdx] ?? null,
       point,
       tideIn
     );
+    const tb = calculateTurbidity(
+      point,
+      ev.bottomSurgeCm,
+      hourly.past24hRainMm[hourIdx] ?? null,
+      tideIn.deltaCm,
+      t
+    );
+    return { ev, tb };
   }, [point, hourly, tide, hourIdx]);
 
   // ハイライト列が見えるようにスクロール
@@ -144,9 +161,18 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
                 {point.subName && (
                   <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 md:px-2 md:text-xs">{point.subName}</span>
                 )}
-                {current?.reefShielded && (
+                {current && (
+                  <span
+                    className={`flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 md:px-2 md:text-xs ${TURBIDITY_META[current.tb.status].badge}`}
+                    title={current.tb.reasons.length > 0 ? `要因: ${current.tb.reasons.join("・")}` : undefined}
+                  >
+                    <span>{TURBIDITY_META[current.tb.status].icon}</span>
+                    <span>透明度: {TURBIDITY_META[current.tb.status].label}</span>
+                  </span>
+                )}
+                {current?.ev.reefShielded && (
                   <span className="flex items-center gap-0.5 rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200 md:text-xs">
-                    <Anchor className="h-3 w-3" />干潮リーフ遮断中（{point.reefThresholdCm}cm以下・現在{current.tideCm}cm）
+                    <Anchor className="h-3 w-3" />干潮リーフ遮断中（{point.reefThresholdCm}cm以下・現在{current.ev.tideCm}cm）
                   </span>
                 )}
               </div>
@@ -163,9 +189,9 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
                 <Info className="mt-0.5 h-3 w-3 shrink-0 text-sky-500 md:h-3.5 md:w-3.5" />
                 <span className="line-clamp-2 md:line-clamp-none">{point.note}</span>
               </p>
-              {current && current.currentAlerts.length > 0 && (
+              {current && current.ev.currentAlerts.length > 0 && (
                 <div className="mt-1.5 space-y-1 md:mt-2">
-                  {current.currentAlerts.map((a) => (
+                  {current.ev.currentAlerts.map((a) => (
                     <p key={a.type} className="flex gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[10px] leading-snug text-amber-800 ring-1 ring-amber-200 md:px-3 md:py-1.5 md:text-xs">
                       <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 md:h-3.5 md:w-3.5" />
                       <span><b>{a.title}：</b>{a.message}</span>
@@ -227,6 +253,21 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
                           {c.ev.bottomSurgeCm}
                         </span>
                       )}
+                    </Row>
+                    {/* 透明度目安 */}
+                    <Row label={<>透明度<span className="hidden text-slate-400 md:inline">目安</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                      {(c) => {
+                        const m = TURBIDITY_META[c.tb.status];
+                        return (
+                          <div
+                            className="flex flex-col items-center leading-none"
+                            title={c.tb.reasons.length > 0 ? `${m.label}（${c.tb.reasons.join("・")}）` : m.label}
+                          >
+                            <span className="text-xs md:text-sm">{m.icon}</span>
+                            <span className={`text-[9px] font-semibold md:text-[10px] ${m.text}`}>{m.short}</span>
+                          </div>
+                        );
+                      }}
                     </Row>
                     {/* 実効うねり / 沖の波高 */}
                     <Row label={<>実効うねり<span className="text-slate-400">/波高</span> m</>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
@@ -346,6 +387,7 @@ type Col = {
   tideDelta: number | null;
   surf: { meters: number; label: string } | null;
   ev: SwellEvaluation;
+  tb: TurbidityEvaluation;
 };
 
 function Row({
@@ -361,12 +403,12 @@ function Row({
 }) {
   return (
     <tr>
-      <th className={`${labelCls} border-b border-slate-100 py-1 md:py-2`}>{label}</th>
+      <th className={`${labelCls} border-b border-slate-100 py-0.5 md:py-2`}>{label}</th>
       {cols.map((c, k) => (
         <td
           key={c.t}
           onClick={() => onSelect(c.i)}
-          className={`h-8 cursor-pointer border-b border-slate-100 px-0.5 md:h-12 md:px-1 ${
+          className={`h-7 cursor-pointer border-b border-slate-100 px-0.5 md:h-11 md:px-1 ${
             k === activeCol ? `bg-rose-50 ${last ? "rounded-b-lg" : ""}` : "hover:bg-sky-50/60"
           }`}
         >

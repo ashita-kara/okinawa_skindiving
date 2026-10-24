@@ -14,6 +14,8 @@ export interface PointHourly {
   windGusts: (number | null)[];
   /** 風が吹いてくる方角 (0=北) */
   windDirection: (number | null)[];
+  /** 過去24時間の累積降水量 (mm) */
+  past24hRainMm: (number | null)[];
 }
 
 export interface MarineResult {
@@ -39,6 +41,7 @@ interface WindLocation {
     wind_speed_10m: (number | null)[];
     wind_gusts_10m: (number | null)[];
     wind_direction_10m: (number | null)[];
+    precipitation?: (number | null)[];
   };
 }
 
@@ -107,8 +110,8 @@ async function fetchMarineDataCached(pointsSignature: string): Promise<MarineRes
     `https://marine-api.open-meteo.com/v1/marine?${common}` +
     `&hourly=wave_height,wind_wave_height,swell_wave_height,swell_wave_direction,swell_wave_period`;
   const windUrl =
-    `https://api.open-meteo.com/v1/forecast?${common}` +
-    `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=ms`;
+    `https://api.open-meteo.com/v1/forecast?${common}&past_days=1` +
+    `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&wind_speed_unit=ms`;
 
   const marineRaw = await fetchJsonWithRetry<MarineLocation | MarineLocation[]>(
     marineUrl,
@@ -142,6 +145,16 @@ async function fetchMarineDataCached(pointsSignature: string): Promise<MarineRes
         const k = wIdx.get(t);
         return k === undefined || !arr ? null : arr[k] ?? null;
       });
+    const past24hRainMm = h.time.map((t) => {
+      const k = wIdx.get(t);
+      if (k === undefined || !w?.precipitation) return null;
+      const start = Math.max(0, k - 23);
+      let sum = 0;
+      for (let m = start; m <= k; m++) {
+        sum += w.precipitation[m] ?? 0;
+      }
+      return Math.round(sum * 10) / 10;
+    });
     byPointId[p.id] = {
       time: h.time,
       waveHeight: h.wave_height,
@@ -152,6 +165,7 @@ async function fetchMarineDataCached(pointsSignature: string): Promise<MarineRes
       windSpeed: pick(w?.wind_speed_10m),
       windGusts: pick(w?.wind_gusts_10m),
       windDirection: pick(w?.wind_direction_10m),
+      past24hRainMm,
     };
   });
 
