@@ -1398,5 +1398,21 @@ export const DIVE_POINTS: DivePoint[] = [
     bottomType: "fine_sand",
     riverImpact: "high",
     note: "石垣島西岸の広大な湾。東風の日は穏やかで多様なサンゴが見られるが、名蔵川河口が近いため大雨の後は淡水・赤土による濁りが出やすい。"
+  },
+  {
+    id: "hirakubozaki",
+    name: "平久保崎灯台下",
+    yomi: "ひらくぼざきとうだいした",
+    area: "石垣",
+    lat: 24.614094,
+    lon: 124.321618,
+    targetDepth: 5.0,
+    openDirection: 325,
+    openAngleWidth: 85,
+    reefProtection: 0.25,
+    hasOuterReef: false,
+    bottomType: "coral_sand",
+    riverImpact: "none",
+    note: "石垣島最北端・平久保崎の灯台下に広がるサンゴ礁域。南〜東風の日は穏やかで透明度も抜群だが、岬先端に近く潮の流れ（カレント）と北〜西うねりに注意。"
   }
 ];
