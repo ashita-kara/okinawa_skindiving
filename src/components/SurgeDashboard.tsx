@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import SpotDrawer from "@/components/SpotDrawer";
 import TidePanel from "@/components/TidePanel";
+import ApneaTrainer from "@/components/ApneaTrainer";
+import GuideSection from "@/components/GuideSection";
 import {
   Waves, Clock, Anchor, MapPin, Info, AlertTriangle, Heart, ChevronUp, ChevronDown,
-  LayoutGrid, Map as MapIcon, Moon,
+  LayoutGrid, Map as MapIcon, Moon, Timer, BookOpen, ArrowLeft,
 } from "lucide-react";
 import { DIVE_POINTS, type AreaCategory, type DivePoint } from "@/data/points";
 import { calculateUnderwaterSurge, getAngleDiff, type SwellEvaluation } from "@/lib/swellCalc";
@@ -27,6 +29,7 @@ const SurgeMap = dynamic(() => import("@/components/SurgeMap"), {
 
 type Tab = "すべて" | "お気に入り" | AreaCategory;
 type View = "list" | "map" | "tide";
+type SubPage = "none" | "training" | "guide";
 
 const TABS: Tab[] = ["すべて", "お気に入り", "南部", "中部", "恩納村", "名護・本部", "国頭・北部", "慶良間", "宮古", "石垣"];
 const FAV_KEY = "okinawa-skindiving:favorites:v1";
@@ -103,6 +106,7 @@ function DirectionCompass({ point, swellDir }: { point: DivePoint; swellDir: num
 export default function SurgeDashboard({ data, tide }: { data: MarineResult; tide: TideData }) {
   const [tab, setTab] = useState<Tab>("すべて");
   const [view, setView] = useState<View>("list");
+  const [subPage, setSubPage] = useState<SubPage>("none");
   const [hourIdx, setHourIdx] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<DivePoint | null>(null);
@@ -214,12 +218,72 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
             <p className="mt-2 max-w-2xl text-xs text-slate-500 sm:mt-3 sm:text-sm">
               Open-Meteo の公開数値データに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、海中で体が振られる幅の目安（指数）を算出します。
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSubPage((p) => (p === "training" ? "none" : "training"))}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold ring-1 transition ${
+                  subPage === "training"
+                    ? "bg-sky-600 text-white ring-sky-600 shadow-xs"
+                    : "bg-white/90 text-sky-800 ring-sky-200 hover:bg-sky-50"
+                }`}
+              >
+                <Timer className="h-3.5 w-3.5" />
+                息止めトレーニング
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubPage((p) => (p === "guide" ? "none" : "guide"))}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold ring-1 transition ${
+                  subPage === "guide"
+                    ? "bg-teal-600 text-white ring-teal-600 shadow-xs"
+                    : "bg-white/90 text-teal-800 ring-teal-200 hover:bg-teal-50"
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                海と体調の知識（読本）
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* コントロール */}
       <section className="sticky top-0 z-[45] border-y border-sky-100 bg-white/85 backdrop-blur-xl">
+        {subPage !== "none" ? (
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-2.5 sm:px-10">
+            <button
+              type="button"
+              onClick={() => setSubPage("none")}
+              className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3.5 py-1.5 text-xs font-bold text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-100 sm:text-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              底揺れ・海況ナビに戻る
+            </button>
+            <div className="inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setSubPage("training")}
+                className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
+                  subPage === "training" ? "bg-white font-bold text-sky-700 shadow-xs" : "text-slate-600 hover:text-sky-700"
+                }`}
+              >
+                <Timer className="h-3.5 w-3.5" />
+                息止めトレ
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubPage("guide")}
+                className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
+                  subPage === "guide" ? "bg-white font-bold text-teal-700 shadow-xs" : "text-slate-600 hover:text-teal-700"
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                海と体調の知識
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="mx-auto max-w-6xl space-y-3 px-5 py-3 sm:px-10 md:space-y-4 md:py-4">
           {/* 表示切替 */}
           <div className="flex items-center justify-between gap-3">
@@ -317,9 +381,16 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
             </div>
           )}
         </div>
+        )}
       </section>
 
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-10">
+        {subPage === "training" ? (
+          <ApneaTrainer />
+        ) : subPage === "guide" ? (
+          <GuideSection />
+        ) : (
+          <>
         {data.error && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200">
             <AlertTriangle className="h-4 w-4" /> データ取得に失敗しました: {data.error}
@@ -484,6 +555,8 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
               );
             })}
           </div>
+        )}
+          </>
         )}
 
         <footer className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
