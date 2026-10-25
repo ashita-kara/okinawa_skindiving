@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Play, Pause, Square, RotateCcw, Volume2, VolumeX, Bell, Clock, Trophy,
-  AlertTriangle, Zap, CheckCircle2, Footprints, HelpCircle,
+  AlertTriangle, Zap, CheckCircle2, HelpCircle,
 } from "lucide-react";
 
 type Mode = "o2" | "co2" | "max" | "stretch";
@@ -73,9 +73,9 @@ function fmt(sec: number) {
 
 export default function ApneaTrainer() {
   const [mode, setMode] = useState<Mode>("o2");
-  const [o2StartSec, setO2StartSec] = useState(60); // デフォルト 1:00 → 2:00
+  const [o2StartSec, setO2StartSec] = useState(60);
   const [restRule, setRestRule] = useState<RestRule>("equal");
-  const [prepSec, setPrepSec] = useState<number>(30); // デフォルト30秒
+  const [prepSec, setPrepSec] = useState<number>(30);
   const [co2HoldSec, setCo2HoldSec] = useState(75);
   const [co2Sets, setCo2Sets] = useState<6 | 8>(6);
   const [stretchSets, setStretchSets] = useState<4 | 5>(4);
@@ -89,7 +89,6 @@ export default function ApneaTrainer() {
   const [lastMaxResult, setLastMaxResult] = useState<{ holdSec: number; isNewBest: boolean; contractionSec?: number } | null>(null);
 
   const [soundMode, setSoundMode] = useState<SoundMode>("voice");
-  const [walkPaceOn, setWalkPaceOn] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const [running, setRunning] = useState(false);
@@ -98,11 +97,19 @@ export default function ApneaTrainer() {
   const [phase, setPhase] = useState<PhaseType>("prepare");
   const [remaining, setRemaining] = useState(30);
   const [phaseTotal, setPhaseTotal] = useState(30);
-  const [maxElapsed, setMaxElapsed] = useState(0); // 一発計測のカウントアップ秒数
+  const [maxElapsed, setMaxElapsed] = useState(0);
   const [contractions, setContractions] = useState<Record<number, number>>({});
   const [totalSessions, setTotalSessions] = useState(0);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // setState updater 内で副作用（音声再生）を呼ばないための進行管理 ref
+  const runtimeRef = useRef({
+    roundIdx: 0,
+    phase: "prepare" as PhaseType,
+    remaining: 30,
+    phaseTotal: 30,
+    maxElapsed: 0,
+  });
 
   // 初回マウント時：保存された設定＆累計回数＆自己ベスト履歴を復元
   useEffect(() => {
@@ -132,7 +139,6 @@ export default function ApneaTrainer() {
         if (p.co2Sets === 6 || p.co2Sets === 8) setCo2Sets(p.co2Sets);
         if (p.stretchSets === 4 || p.stretchSets === 5) setStretchSets(p.stretchSets);
         if (p.soundMode === "voice" || p.soundMode === "bell" || p.soundMode === "mute") setSoundMode(p.soundMode);
-        if (typeof p.walkPaceOn === "boolean") setWalkPaceOn(p.walkPaceOn);
       }
     } catch {
       /* ignore */
@@ -158,7 +164,6 @@ export default function ApneaTrainer() {
           co2Sets,
           stretchSets,
           soundMode,
-          walkPaceOn,
         })
       );
     } catch {
@@ -166,7 +171,7 @@ export default function ApneaTrainer() {
     }
   }, [
     prefsLoaded, mode, o2StartSec, restRule, prepSec, maxPrepSec,
-    hideMaxTime, maxNotify, co2HoldSec, co2Sets, stretchSets, soundMode, walkPaceOn,
+    hideMaxTime, maxNotify, co2HoldSec, co2Sets, stretchSets, soundMode,
   ]);
 
   /** ラウンド一覧の生成 */
@@ -209,10 +214,13 @@ export default function ApneaTrainer() {
     [schedule]
   );
 
-  /** 音割れしないソフトなチャイム音（フェードイン・指数減衰エンベロープ付き） */
-  const playSoftTone = useCallback(
-    (freq = 587.33, durationMs = 160, peakGain = 0.08) => {
-      if (soundMode === "mute" || typeof window === "undefined") return;
+  /**
+   * ベル音モード専用トーン（音声ガイドモード時は AudioContext を一切起動しないことで
+   * Android / Pixel の TTS と WebAudio の干渉によるガビガビ音割れを根本から防ぐ）
+   */
+  const playBell = useCallback(
+    (freq = 587.33, durationMs = 150) => {
+      if (soundMode !== "bell" || typeof window === "undefined") return;
       try {
         const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         if (!Ctx) return;
@@ -227,15 +235,18 @@ export default function ApneaTrainer() {
 
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, now);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.linearRampToValueAtTime(peakGain, now + 0.018);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
         osc.connect(gain);
         gain.connect(ctx.destination);
+        osc.onended = () => {
+          osc.disconnect();
+          gain.disconnect();
+        };
         osc.start(now);
-        osc.stop(now + dur + 0.02);
+        osc.stop(now + dur + 0.01);
       } catch {
         /* ignore audio error */
       }
@@ -243,42 +254,56 @@ export default function ApneaTrainer() {
     [soundMode]
   );
 
-  /** 日本語音声ガイド（チャイムと同時再生しないことで音割れを防止） */
-  const announce = useCallback(
-    (text: string, fallbackBellFreq = 784) => {
+  /**
+   * ガイド通知
+   * - voiceモード時: AudioContextを使わず、OS標準のネイティブTTS（volume/rate無加工）で1回だけ発声
+   * - bellモード時: ベル音のみ
+   */
+  const notify = useCallback(
+    (text: string, bellFreq = 784) => {
       if (soundMode === "mute" || typeof window === "undefined") return;
       if (soundMode === "bell" || !("speechSynthesis" in window)) {
-        playSoftTone(fallbackBellFreq, 240, 0.09);
+        playBell(bellFreq, 200);
         return;
       }
       try {
-        window.speechSynthesis.cancel();
+        // 発話中のときだけ cancel し、volume/rate はスマホ標準(1.0)のまま無加工で渡すことでリサンプリング音割れを防ぐ
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "ja-JP";
-        u.rate = 1.0;
-        u.volume = 0.75;
         window.speechSynthesis.speak(u);
       } catch {
-        playSoftTone(fallbackBellFreq, 240, 0.09);
+        /* ignore */
       }
     },
-    [soundMode, playSoftTone]
+    [soundMode, playBell]
   );
 
   /** 設定変更時のリセット */
   const resetTimer = useCallback(() => {
     setRunning(false);
     setCompleted(false);
+    const first = schedule[0]?.breatheSec ?? 30;
+    runtimeRef.current = {
+      roundIdx: 0,
+      phase: "prepare",
+      remaining: first,
+      phaseTotal: first,
+      maxElapsed: 0,
+    };
     setRoundIdx(0);
     setPhase("prepare");
-    const first = schedule[0]?.breatheSec ?? 30;
     setRemaining(first);
     setPhaseTotal(first);
     setMaxElapsed(0);
     setContractions({});
     setLastMaxResult(null);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+      }
     }
   }, [schedule]);
 
@@ -289,10 +314,10 @@ export default function ApneaTrainer() {
 
   /** 一発計測のストップ（記録確定） */
   const finishMaxHold = useCallback(() => {
-    if (mode !== "max" || phase !== "hold") return;
+    if (mode !== "max" || runtimeRef.current.phase !== "hold") return;
     setRunning(false);
     setCompleted(true);
-    const finalSec = maxElapsed;
+    const finalSec = runtimeRef.current.maxElapsed;
     const cSec = contractions[1];
     const isNewBest = finalSec > bestHoldSec && finalSec >= 5;
     const nextBest = isNewBest ? finalSec : bestHoldSec;
@@ -318,105 +343,128 @@ export default function ApneaTrainer() {
     const min = Math.floor(finalSec / 60);
     const sec = finalSec % 60;
     const spoken = min > 0 ? `${min}分${sec > 0 ? `${sec}秒` : ""}` : `${sec}秒`;
-    announce(`計測終了。記録は${spoken}です`, 880);
-  }, [mode, phase, maxElapsed, contractions, bestHoldSec, maxHistory, totalSessions, announce]);
+    notify(`計測終了。記録は${spoken}です`, 880);
+  }, [mode, contractions, bestHoldSec, maxHistory, totalSessions, notify]);
 
-  /** 1秒ごとのタイマー進行 */
+  /**
+   * 1秒ごとのタイマー進行
+   * （React の setState updater 関数内で音声再生を呼ばないよう runtimeRef で1秒に1回だけ確実に処理する）
+   */
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => {
+      const rt = runtimeRef.current;
+
       // 一発計測モードのホールド中（カウントアップ）
-      if (mode === "max" && phase === "hold") {
-        setMaxElapsed((prev) => {
-          const next = prev + 1;
-          if (maxNotify > 0 && next % maxNotify === 0) {
-            const m = Math.floor(next / 60);
-            const s = next % 60;
-            const label = m > 0 ? `${m}分${s > 0 ? `${s}秒` : ""}経過` : `${s}秒経過`;
-            announce(label, 659.25);
-          } else if (walkPaceOn) {
-            playSoftTone(330, 45, 0.04);
-          }
-          return next;
-        });
+      if (mode === "max" && rt.phase === "hold") {
+        const next = rt.maxElapsed + 1;
+        rt.maxElapsed = next;
+        setMaxElapsed(next);
+        if (maxNotify > 0 && next % maxNotify === 0) {
+          const m = Math.floor(next / 60);
+          const s = next % 60;
+          const label = m > 0 ? `${m}分${s > 0 ? `${s}秒` : ""}経過` : `${s}秒経過`;
+          notify(label, 659.25);
+        }
         return;
       }
 
-      // 通常のカウントダウン進行
-      setRemaining((prev) => {
-        if (prev > 1) {
-          const next = prev - 1;
-          if (next === 90 && phaseTotal >= 110) announce("1分30秒前", 523.25);
-          else if (next === 60 && phaseTotal >= 80) announce("1分前", 523.25);
-          else if (next === 30 && phaseTotal >= 45) announce("30秒前", 523.25);
-          else if (next === 15 && phaseTotal >= 25) announce("15秒前", 523.25);
-          else if (next === 10 && phaseTotal >= 20) announce("10秒前", 523.25);
-          else if (next <= 3 && next >= 1) {
-            playSoftTone(523.25, 110, 0.07);
-          } else if (phase === "hold" && walkPaceOn) {
-            playSoftTone(330, 45, 0.04);
-          }
-          return next;
+      // カウントダウン中（残り2秒以上）
+      if (rt.remaining > 1) {
+        const next = rt.remaining - 1;
+        rt.remaining = next;
+        setRemaining(next);
+
+        if (next === 90 && rt.phaseTotal >= 110) notify("1分30秒前", 523.25);
+        else if (next === 60 && rt.phaseTotal >= 80) notify("1分前", 523.25);
+        else if (next === 30 && rt.phaseTotal >= 45) notify("30秒前", 523.25);
+        else if (next === 15 && rt.phaseTotal >= 25) notify("15秒前", 523.25);
+        else if (next === 10 && rt.phaseTotal >= 20) notify("10秒前", 523.25);
+        else if (next === 5) notify("5秒前", 523.25);
+        else if (soundMode === "bell" && next <= 3 && next >= 1) {
+          playBell(523.25, 100);
         }
+        return;
+      }
 
-        // フェーズ切り替え
-        const curStep = schedule[roundIdx];
-        if (!curStep) return 0;
+      // 残り1秒 → 次のフェーズへ切り替え
+      const curStep = schedule[rt.roundIdx];
+      if (!curStep) return;
 
-        if (mode === "max" && phase === "prepare") {
-          setPhase("hold");
-          setMaxElapsed(0);
-          announce("息止めスタート", 783.99);
-          return 0;
+      if (mode === "max" && rt.phase === "prepare") {
+        rt.phase = "hold";
+        rt.maxElapsed = 0;
+        setPhase("hold");
+        setMaxElapsed(0);
+        notify("スタート", 783.99);
+        return;
+      }
+
+      if (mode === "stretch") {
+        if (rt.phase === "prepare") {
+          const ex = curStep.exhaleSec ?? 10;
+          rt.phase = "exhale";
+          rt.phaseTotal = ex;
+          rt.remaining = ex;
+          setPhase("exhale");
+          setPhaseTotal(ex);
+          setRemaining(ex);
+          notify("息を吐き切ってください", 659.25);
+          return;
         }
-
-        if (mode === "stretch") {
-          if (phase === "prepare") {
-            setPhase("exhale");
-            setPhaseTotal(curStep.exhaleSec ?? 10);
-            announce("息をゆっくり吐き切ってください", 659.25);
-            return curStep.exhaleSec ?? 10;
-          }
-          if (phase === "exhale") {
-            setPhase("vacuum");
-            setPhaseTotal(curStep.holdSec);
-            announce("息を止めて、お腹を引き込みキープ", 783.99);
-            return curStep.holdSec;
-          }
-        } else if (phase === "prepare") {
-          setPhase("hold");
+        if (rt.phase === "exhale") {
+          rt.phase = "vacuum";
+          rt.phaseTotal = curStep.holdSec;
+          rt.remaining = curStep.holdSec;
+          setPhase("vacuum");
           setPhaseTotal(curStep.holdSec);
-          announce("息を止めてください", 783.99);
-          return curStep.holdSec;
+          setRemaining(curStep.holdSec);
+          notify("息を止めてキープ", 783.99);
+          return;
         }
+      } else if (rt.phase === "prepare") {
+        rt.phase = "hold";
+        rt.phaseTotal = curStep.holdSec;
+        rt.remaining = curStep.holdSec;
+        setPhase("hold");
+        setPhaseTotal(curStep.holdSec);
+        setRemaining(curStep.holdSec);
+        notify("息を止めてください", 783.99);
+        return;
+      }
 
-        // 次のラウンドへ、または完了
-        if (roundIdx + 1 < schedule.length) {
-          const nextStep = schedule[roundIdx + 1];
-          setRoundIdx(roundIdx + 1);
-          setPhase("prepare");
-          setPhaseTotal(nextStep.breatheSec);
-          announce("呼吸を再開してください", 587.33);
-          return nextStep.breatheSec;
-        } else {
-          setRunning(false);
-          setCompleted(true);
-          announce("トレーニング完了です。お疲れ様でした", 880);
-          setTotalSessions((s) => {
-            const nextCount = s + 1;
-            try {
-              localStorage.setItem(STATS_KEY, String(nextCount));
-            } catch {
-              /* ignore */
-            }
-            return nextCount;
-          });
-          return 0;
-        }
-      });
+      // 次のラウンドへ、または完了
+      if (rt.roundIdx + 1 < schedule.length) {
+        const nextIdx = rt.roundIdx + 1;
+        const nextStep = schedule[nextIdx];
+        rt.roundIdx = nextIdx;
+        rt.phase = "prepare";
+        rt.phaseTotal = nextStep.breatheSec;
+        rt.remaining = nextStep.breatheSec;
+        setRoundIdx(nextIdx);
+        setPhase("prepare");
+        setPhaseTotal(nextStep.breatheSec);
+        setRemaining(nextStep.breatheSec);
+        notify("呼吸してください", 587.33);
+      } else {
+        rt.remaining = 0;
+        setRemaining(0);
+        setRunning(false);
+        setCompleted(true);
+        notify("トレーニング完了です。お疲れ様でした", 880);
+        setTotalSessions((s) => {
+          const nextCount = s + 1;
+          try {
+            localStorage.setItem(STATS_KEY, String(nextCount));
+          } catch {
+            /* ignore */
+          }
+          return nextCount;
+        });
+      }
     }, 1000);
     return () => window.clearInterval(id);
-  }, [running, phase, phaseTotal, roundIdx, schedule, mode, walkPaceOn, maxNotify, playSoftTone, announce]);
+  }, [running, schedule, mode, maxNotify, soundMode, playBell, notify]);
 
   const elapsedInHold =
     mode === "max"
@@ -438,17 +486,16 @@ export default function ApneaTrainer() {
       return;
     }
     if (!running) {
-      if (roundIdx === 0 && phase === "prepare" && remaining === phaseTotal) {
-        announce(
+      const rt = runtimeRef.current;
+      if (rt.roundIdx === 0 && rt.phase === "prepare" && rt.remaining === rt.phaseTotal) {
+        notify(
           mode === "stretch"
             ? "ストレッチを開始します"
             : mode === "max"
-              ? "カウントダウンを開始します。呼吸を整えてください"
-              : "スタートします。リラックスして呼吸してください",
+              ? "カウントダウンを開始します"
+              : "スタートします",
           659.25
         );
-      } else {
-        playSoftTone(659.25, 100, 0.06);
       }
     }
     setRunning((r) => !r);
@@ -457,10 +504,13 @@ export default function ApneaTrainer() {
   const recordContraction = () => {
     if (phase !== "hold") return;
     setContractions((prev) => ({ ...prev, [roundIdx + 1]: elapsedInHold }));
-    playSoftTone(740, 90, 0.06);
   };
 
   const cycleSoundMode = () => {
+    // モード切替時に残っている音声をクリア
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     setSoundMode((prev) => (prev === "voice" ? "bell" : prev === "bell" ? "mute" : "voice"));
   };
 
@@ -474,13 +524,10 @@ export default function ApneaTrainer() {
         </p>
         <ul className="mt-1.5 list-disc space-y-0.5 pl-6 text-[11px] text-amber-800 sm:text-xs">
           <li>
-            必ず<b>陸上の安全な場所（ベッド・ソファ・カーペットの上など）</b>で行い、水中・浴槽・運転中・階段付近では絶対に実施しないでください。
+            必ず<b>陸上の安全な場所（ベッド・ソファ・カーペットの上など）</b>で行い、水中・浴槽・運転中などでは絶対に実施しないでください。
           </li>
           <li>
             事前の大きく速い深呼吸の繰り返し（<b>過呼吸／ハイパーベンチレーション</b>）は、前触れのない意識喪失（ブラックアウト）の原因となるため厳禁です。
-          </li>
-          <li>
-            歩行しながら行う場合は、転倒やふらつきに備えて周囲に角や障害物のない平坦な室内で、無理のない範囲（自己責任）で行ってください。
           </li>
         </ul>
       </div>
@@ -558,21 +605,6 @@ export default function ApneaTrainer() {
                 >
                   <Clock className="h-3.5 w-3.5" />
                   {hideMaxTime ? "タイム非表示" : "タイム表示あり"}
-                </button>
-              )}
-              {mode !== "stretch" && (
-                <button
-                  type="button"
-                  onClick={() => setWalkPaceOn((w) => !w)}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition ${
-                    walkPaceOn
-                      ? "bg-teal-50 text-teal-700 ring-teal-300"
-                      : "bg-slate-50 text-slate-500 ring-slate-200 hover:bg-slate-100"
-                  }`}
-                  title="息止め中に1秒1歩のペース音を鳴らし、歩数（秒数）を表示します"
-                >
-                  <Footprints className="h-3.5 w-3.5" />
-                  歩行音 {walkPaceOn ? "ON" : "OFF"}
                 </button>
               )}
               <button
@@ -676,9 +708,7 @@ export default function ApneaTrainer() {
                     <p className="mt-2 font-mono text-6xl font-black tracking-tight text-slate-800">
                       {fmt(maxElapsed)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {walkPaceOn ? `目安 ${maxElapsed}歩` : "ストップを押すまで計測します"}
-                    </p>
+                    <p className="mt-1 text-xs text-slate-500">ストップを押すまで計測します</p>
                   </>
                 )
               ) : mode === "max" && completed && lastMaxResult ? (
@@ -701,9 +731,6 @@ export default function ApneaTrainer() {
                     {phase === "hold" || phase === "vacuum" ? (
                       <>
                         経過 <b className="font-mono text-slate-700">{fmt(elapsedInHold)}</b>
-                        {walkPaceOn && phase === "hold" && (
-                          <span className="ml-1.5 font-semibold text-teal-700">（目安 {elapsedInHold}歩）</span>
-                        )}
                       </>
                     ) : mode === "max" ? (
                       <>0:00で息止め計測スタート</>
@@ -1155,9 +1182,6 @@ export default function ApneaTrainer() {
                         </td>
                         <td className="py-2 font-mono font-bold text-amber-700">
                           {fmt(s.holdSec)}
-                          {walkPaceOn && mode !== "stretch" && (
-                            <span className="ml-1 text-[10px] font-normal text-teal-600">({s.holdSec}歩)</span>
-                          )}
                         </td>
                         {mode !== "stretch" && (
                           <td className="py-2 font-mono text-[11px] text-slate-500">
