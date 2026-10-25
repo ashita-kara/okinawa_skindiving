@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Play, Pause, RotateCcw, Volume2, VolumeX, AlertTriangle, Zap, CheckCircle2, Footprints, HelpCircle,
+  Play, Pause, RotateCcw, Volume2, VolumeX, Bell, AlertTriangle, Zap, CheckCircle2, Footprints, HelpCircle,
 } from "lucide-react";
 
 type Mode = "o2" | "co2" | "stretch";
 type RestRule = "equal" | "x1.5" | "x2" | "fixed60" | "fixed90" | "fixed120";
 type PhaseType = "prepare" | "hold" | "exhale" | "vacuum";
+type SoundMode = "voice" | "bell" | "mute";
 
 interface RoundStep {
   round: number;
@@ -17,6 +18,7 @@ interface RoundStep {
 }
 
 const STATS_KEY = "okinawa-skindiving:apnea-stats:v1";
+const PREFS_KEY = "okinawa-skindiving:apnea-prefs:v1";
 
 /** O2テーブルの開始時間プリセット（ここから+15秒ずつ5セット） */
 const O2_START_PRESETS = [
@@ -48,6 +50,8 @@ const REST_RULES: { id: RestRule; label: string; desc: string }[] = [
   { id: "fixed120", label: "固定 2:00", desc: "毎回2分間の固定休憩（定番）" },
 ];
 
+const PREP_OPTIONS = [15, 30, 45, 60, 90] as const;
+
 function fmt(sec: number) {
   const s = Math.max(0, Math.round(sec));
   const m = Math.floor(s / 60);
@@ -59,36 +63,75 @@ export default function ApneaTrainer() {
   const [mode, setMode] = useState<Mode>("o2");
   const [o2StartSec, setO2StartSec] = useState(60); // デフォルト 1:00 → 2:00
   const [restRule, setRestRule] = useState<RestRule>("equal");
-  const [prepSec, setPrepSec] = useState(45);
+  const [prepSec, setPrepSec] = useState<number>(30); // デフォルト30秒
   const [co2HoldSec, setCo2HoldSec] = useState(75);
   const [co2Sets, setCo2Sets] = useState<6 | 8>(6);
   const [stretchSets, setStretchSets] = useState<4 | 5>(4);
 
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundMode, setSoundMode] = useState<SoundMode>("voice");
   const [walkPaceOn, setWalkPaceOn] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const [running, setRunning] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<PhaseType>("prepare");
-  const [remaining, setRemaining] = useState(45);
-  const [phaseTotal, setPhaseTotal] = useState(45);
+  const [remaining, setRemaining] = useState(30);
+  const [phaseTotal, setPhaseTotal] = useState(30);
   const [contractions, setContractions] = useState<Record<number, number>>({});
   const [totalSessions, setTotalSessions] = useState(0);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // 初回マウント時：保存された設定＆累計回数を復元
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(STATS_KEY) ?? "0");
-      if (Number.isFinite(saved) && saved > 0) {
+      const savedStats = Number(localStorage.getItem(STATS_KEY) ?? "0");
+      if (Number.isFinite(savedStats) && savedStats > 0) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setTotalSessions(saved);
+        setTotalSessions(savedStats);
+      }
+      const rawPrefs = localStorage.getItem(PREFS_KEY);
+      if (rawPrefs) {
+        const p = JSON.parse(rawPrefs);
+        if (p.mode === "o2" || p.mode === "co2" || p.mode === "stretch") setMode(p.mode);
+        if (typeof p.o2StartSec === "number" && p.o2StartSec >= 15 && p.o2StartSec <= 300) setO2StartSec(p.o2StartSec);
+        if (["equal", "x1.5", "x2", "fixed60", "fixed90", "fixed120"].includes(p.restRule)) setRestRule(p.restRule);
+        if (typeof p.prepSec === "number" && p.prepSec >= 10 && p.prepSec <= 180) setPrepSec(p.prepSec);
+        if (typeof p.co2HoldSec === "number" && p.co2HoldSec >= 30 && p.co2HoldSec <= 240) setCo2HoldSec(p.co2HoldSec);
+        if (p.co2Sets === 6 || p.co2Sets === 8) setCo2Sets(p.co2Sets);
+        if (p.stretchSets === 4 || p.stretchSets === 5) setStretchSets(p.stretchSets);
+        if (p.soundMode === "voice" || p.soundMode === "bell" || p.soundMode === "mute") setSoundMode(p.soundMode);
+        if (typeof p.walkPaceOn === "boolean") setWalkPaceOn(p.walkPaceOn);
       }
     } catch {
       /* ignore */
     }
+    setPrefsLoaded(true);
   }, []);
+
+  // 設定変更時に localStorage へ自動保存
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    try {
+      localStorage.setItem(
+        PREFS_KEY,
+        JSON.stringify({
+          mode,
+          o2StartSec,
+          restRule,
+          prepSec,
+          co2HoldSec,
+          co2Sets,
+          stretchSets,
+          soundMode,
+          walkPaceOn,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [prefsLoaded, mode, o2StartSec, restRule, prepSec, co2HoldSec, co2Sets, stretchSets, soundMode, walkPaceOn]);
 
   /** ラウンド一覧の生成 */
   const schedule = useMemo<RoundStep[]>(() => {
@@ -110,9 +153,9 @@ export default function ApneaTrainer() {
       });
     }
     if (mode === "co2") {
-      // 息止め一定、休憩を1:45から15秒ずつ短縮（最低0:30）
+      // 1セット目の前だけ prepSec、2セット目以降は 1:45 → 1:30 → 1:15 → 1:00 → 0:45 → 0:30 と15秒ずつ短縮
       return Array.from({ length: co2Sets }, (_, idx) => {
-        const breatheSec = Math.max(30, 105 - idx * 15);
+        const breatheSec = idx === 0 ? prepSec : Math.max(30, 120 - idx * 15);
         return { round: idx + 1, breatheSec, holdSec: co2HoldSec };
       });
     }
@@ -130,47 +173,66 @@ export default function ApneaTrainer() {
     [schedule]
   );
 
-  /** ビープ音 */
-  const playBeep = useCallback(
-    (freq = 660, durationMs = 110, gainVal = 0.12) => {
-      if (!soundOn || typeof window === "undefined") return;
+  /**
+   * 音割れしないソフトなチャイム音（フェードイン・指数減衰エンベロープ付き）
+   */
+  const playSoftTone = useCallback(
+    (freq = 587.33, durationMs = 160, peakGain = 0.08) => {
+      if (soundMode === "mute" || typeof window === "undefined") return;
       try {
         const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         if (!Ctx) return;
         if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
         const ctx = audioCtxRef.current;
         if (ctx.state === "suspended") ctx.resume();
+
+        const now = ctx.currentTime;
+        const dur = durationMs / 1000;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+
         osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.value = gainVal;
+        osc.frequency.setValueAtTime(freq, now);
+
+        // 急激な波形立ち上がりによる「プチッ・ガビガビ」という音割れを完全に防ぐエンベロープ
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(peakGain, now + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + durationMs / 1000);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
       } catch {
         /* ignore audio error */
       }
     },
-    [soundOn]
+    [soundMode]
   );
 
-  /** 日本語音声ガイド */
-  const speak = useCallback(
-    (text: string) => {
-      if (!soundOn || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  /**
+   * 日本語音声ガイド（チャイムと同時に鳴らすとOSミキサーで音割れするため、
+   * 音声モード時はチャイムを重ねず単体・控えめ音量0.75でクリアに発声する）
+   */
+  const announce = useCallback(
+    (text: string, fallbackBellFreq = 784) => {
+      if (soundMode === "mute" || typeof window === "undefined") return;
+      if (soundMode === "bell" || !("speechSynthesis" in window)) {
+        playSoftTone(fallbackBellFreq, 240, 0.09);
+        return;
+      }
       try {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "ja-JP";
-        u.rate = 1.05;
+        u.rate = 1.0;
+        u.volume = 0.75; // 最大音量(1.0)だとスマホスピーカーで音割れしやすいため0.75に抑える
         window.speechSynthesis.speak(u);
       } catch {
-        /* ignore */
+        playSoftTone(fallbackBellFreq, 240, 0.09);
       }
     },
-    [soundOn]
+    [soundMode, playSoftTone]
   );
 
   /** 設定変更時のリセット */
@@ -179,7 +241,7 @@ export default function ApneaTrainer() {
     setCompleted(false);
     setRoundIdx(0);
     setPhase("prepare");
-    const first = schedule[0]?.breatheSec ?? 45;
+    const first = schedule[0]?.breatheSec ?? 30;
     setRemaining(first);
     setPhaseTotal(first);
     setContractions({});
@@ -201,19 +263,19 @@ export default function ApneaTrainer() {
         if (prev > 1) {
           const next = prev - 1;
           // カウントダウン通知
-          if (next === 30) speak("30秒前");
-          else if (next === 15 && phaseTotal >= 25) speak("15秒前");
-          else if (next === 10 && phaseTotal >= 20) speak("10秒前");
-          else if (next <= 5 && next >= 1) {
-            playBeep(520, 90, 0.14);
+          if (next === 30 && phaseTotal >= 45) announce("30秒前", 523.25);
+          else if (next === 15 && phaseTotal >= 25) announce("15秒前", 523.25);
+          else if (next === 10 && phaseTotal >= 20) announce("10秒前", 523.25);
+          else if (next <= 3 && next >= 1) {
+            playSoftTone(523.25, 110, 0.07);
           } else if (phase === "hold" && walkPaceOn) {
-            // 歩行ペース用メトロノーム音（1秒1歩）
-            playBeep(360, 35, 0.06);
+            // 歩行ペース用メトロノーム音（1秒1歩・柔らかいウッドブロック風）
+            playSoftTone(330, 45, 0.04);
           }
           return next;
         }
 
-        // フェーズ切り替え
+        // フェーズ切り替え（チャイムと音声を同時再生しないことで音割れを防止）
         const curStep = schedule[roundIdx];
         if (!curStep) return 0;
 
@@ -221,22 +283,19 @@ export default function ApneaTrainer() {
           if (phase === "prepare") {
             setPhase("exhale");
             setPhaseTotal(curStep.exhaleSec ?? 10);
-            playBeep(620, 200, 0.18);
-            speak("息をゆっくり全て吐き切ってください");
+            announce("息をゆっくり吐き切ってください", 659.25);
             return curStep.exhaleSec ?? 10;
           }
           if (phase === "exhale") {
             setPhase("vacuum");
             setPhaseTotal(curStep.holdSec);
-            playBeep(820, 240, 0.2);
-            speak("息を止めて、お腹を引き込みキープ");
+            announce("息を止めて、お腹を引き込みキープ", 783.99);
             return curStep.holdSec;
           }
         } else if (phase === "prepare") {
           setPhase("hold");
           setPhaseTotal(curStep.holdSec);
-          playBeep(820, 240, 0.2);
-          speak("息を止めてください");
+          announce("息を止めてください", 783.99);
           return curStep.holdSec;
         }
 
@@ -246,14 +305,12 @@ export default function ApneaTrainer() {
           setRoundIdx(roundIdx + 1);
           setPhase("prepare");
           setPhaseTotal(nextStep.breatheSec);
-          playBeep(580, 240, 0.2);
-          speak("呼吸を再開してください");
+          announce("呼吸を再開してください", 587.33);
           return nextStep.breatheSec;
         } else {
           setRunning(false);
           setCompleted(true);
-          playBeep(880, 350, 0.22);
-          speak("トレーニング完了です。お疲れ様でした");
+          announce("トレーニング完了です。お疲れ様でした", 880);
           setTotalSessions((s) => {
             const nextCount = s + 1;
             try {
@@ -268,7 +325,7 @@ export default function ApneaTrainer() {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [running, phase, phaseTotal, roundIdx, schedule, mode, walkPaceOn, playBeep, speak]);
+  }, [running, phase, phaseTotal, roundIdx, schedule, mode, walkPaceOn, playSoftTone, announce]);
 
   const elapsedInHold = phase === "hold" || phase === "vacuum" ? phaseTotal - remaining : 0;
   const progress = phaseTotal > 0 ? ((phaseTotal - remaining) / phaseTotal) * 100 : 0;
@@ -279,13 +336,15 @@ export default function ApneaTrainer() {
       return;
     }
     if (!running) {
-      playBeep(660, 80, 0.1);
       if (roundIdx === 0 && remaining === phaseTotal) {
-        speak(
+        announce(
           mode === "stretch"
-            ? "ストレッチを開始します。ゆっくり呼吸してください"
-            : "トレーニングを開始します。力を抜いて呼吸してください"
+            ? "ストレッチを開始します"
+            : "スタートします。リラックスして呼吸してください",
+          659.25
         );
+      } else {
+        playSoftTone(659.25, 100, 0.06);
       }
     }
     setRunning((r) => !r);
@@ -294,7 +353,11 @@ export default function ApneaTrainer() {
   const recordContraction = () => {
     if (phase !== "hold") return;
     setContractions((prev) => ({ ...prev, [roundIdx + 1]: elapsedInHold }));
-    playBeep(740, 70, 0.1);
+    playSoftTone(740, 90, 0.06);
+  };
+
+  const cycleSoundMode = () => {
+    setSoundMode((prev) => (prev === "voice" ? "bell" : prev === "bell" ? "mute" : "voice"));
   };
 
   return (
@@ -383,16 +446,32 @@ export default function ApneaTrainer() {
               )}
               <button
                 type="button"
-                onClick={() => setSoundOn((s) => !s)}
-                aria-label={soundOn ? "音声ガイドをミュート" : "音声ガイドをオン"}
+                onClick={cycleSoundMode}
+                title="タップで「音声ガイド → ベル音のみ → 消音」を切り替えます"
                 className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition ${
-                  soundOn
+                  soundMode === "voice"
                     ? "bg-sky-50 text-sky-700 ring-sky-200"
-                    : "bg-slate-100 text-slate-500 ring-slate-200"
+                    : soundMode === "bell"
+                      ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
+                      : "bg-slate-100 text-slate-500 ring-slate-200"
                 }`}
               >
-                {soundOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                {soundOn ? "音ON" : "消音"}
+                {soundMode === "voice" ? (
+                  <>
+                    <Volume2 className="h-3.5 w-3.5" />
+                    音声ガイド
+                  </>
+                ) : soundMode === "bell" ? (
+                  <>
+                    <Bell className="h-3.5 w-3.5" />
+                    ベル音のみ
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="h-3.5 w-3.5" />
+                    消音
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -504,7 +583,7 @@ export default function ApneaTrainer() {
 
           <p className="mt-3 flex items-center gap-1 text-[11px] text-slate-400">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            この端末での累計クリア回数：<b className="font-mono text-slate-600">{totalSessions}</b> 回
+            累計クリア：<b className="font-mono text-slate-600">{totalSessions}</b>回（選択設定はこのブラウザに自動保存されます）
           </p>
         </section>
 
@@ -585,15 +664,15 @@ export default function ApneaTrainer() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
                   <span>1セット目の前の準備呼吸：</span>
-                  {[30, 45, 60, 90].map((s) => (
+                  {PREP_OPTIONS.map((s) => (
                     <button
                       key={s}
                       type="button"
                       disabled={running}
                       onClick={() => setPrepSec(s)}
-                      className={`rounded-lg px-2 py-1 font-mono text-xs font-semibold ${
+                      className={`rounded-lg px-2.5 py-1 font-mono text-xs font-semibold ${
                         prepSec === s ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       } disabled:opacity-50`}
                     >
@@ -612,7 +691,7 @@ export default function ApneaTrainer() {
                   <HelpCircle className="h-3.5 w-3.5" /> CO2耐性テーブルとは？
                 </p>
                 <p className="mt-1">
-                  息止め時間は毎回同じ（無理のない秒数）に固定し、間の休憩時間を <b>1:45 → 1:30 → 1:15 → 1:00 → 0:45 → 0:30</b> と少しずつ短くしていく方法です。長い時間息を止めなくても、後半の「早く息を吸いたい感覚」に落ち着いて対処する練習ができます。
+                  息止め時間は毎回同じ（無理のない秒数）に固定し、2セット目以降の休憩時間を <b>1:45 → 1:30 → 1:15 → 1:00 → 0:45 → 0:30</b> と少しずつ短くしていく方法です。長い時間息を止めなくても、後半の「早く息を吸いたい感覚」に落ち着いて対処する練習ができます。
                 </p>
               </div>
               <div>
@@ -669,6 +748,22 @@ export default function ApneaTrainer() {
                       +15秒
                     </button>
                   </div>
+                </div>
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+                  <span>1セット目の前の準備呼吸：</span>
+                  {PREP_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={running}
+                      onClick={() => setPrepSec(s)}
+                      className={`rounded-lg px-2.5 py-1 font-mono text-xs font-semibold ${
+                        prepSec === s ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      } disabled:opacity-50`}
+                    >
+                      {fmt(s)}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
