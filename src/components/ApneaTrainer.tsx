@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Play, Pause, RotateCcw, Volume2, VolumeX, Bell, AlertTriangle, Zap, CheckCircle2, Footprints, HelpCircle,
+  Play, Pause, Square, RotateCcw, Volume2, VolumeX, Bell, Clock, Trophy,
+  AlertTriangle, Zap, CheckCircle2, Footprints, HelpCircle,
 } from "lucide-react";
 
-type Mode = "o2" | "co2" | "stretch";
+type Mode = "o2" | "co2" | "max" | "stretch";
 type RestRule = "equal" | "x1.5" | "x2" | "fixed60" | "fixed90" | "fixed120";
 type PhaseType = "prepare" | "hold" | "exhale" | "vacuum";
 type SoundMode = "voice" | "bell" | "mute";
+type MaxNotify = 0 | 30 | 60;
 
 interface RoundStep {
   round: number;
@@ -17,8 +19,15 @@ interface RoundStep {
   exhaleSec?: number;
 }
 
+interface MaxRecord {
+  date: string;
+  holdSec: number;
+  contractionSec?: number;
+}
+
 const STATS_KEY = "okinawa-skindiving:apnea-stats:v1";
 const PREFS_KEY = "okinawa-skindiving:apnea-prefs:v1";
+const MAX_KEY = "okinawa-skindiving:apnea-max:v1";
 
 /** O2テーブルの開始時間プリセット（ここから+15秒ずつ5セット） */
 const O2_START_PRESETS = [
@@ -50,7 +59,10 @@ const REST_RULES: { id: RestRule; label: string; desc: string }[] = [
   { id: "fixed120", label: "固定 2:00", desc: "毎回2分間の固定休憩（定番）" },
 ];
 
-const PREP_OPTIONS = [15, 30, 45, 60, 90] as const;
+/** スマホ横幅1行に綺麗に4つ並ぶ準備呼吸オプション */
+const PREP_OPTIONS = [15, 30, 45, 60] as const;
+/** 一発計測用の準備カウントダウン4択（短め2つ＋公式風2つ） */
+const MAX_PREP_OPTIONS = [15, 30, 90, 120] as const;
 
 function fmt(sec: number) {
   const s = Math.max(0, Math.round(sec));
@@ -68,6 +80,14 @@ export default function ApneaTrainer() {
   const [co2Sets, setCo2Sets] = useState<6 | 8>(6);
   const [stretchSets, setStretchSets] = useState<4 | 5>(4);
 
+  // 一発計測モード用設定
+  const [maxPrepSec, setMaxPrepSec] = useState<number>(30);
+  const [hideMaxTime, setHideMaxTime] = useState(false);
+  const [maxNotify, setMaxNotify] = useState<MaxNotify>(0);
+  const [bestHoldSec, setBestHoldSec] = useState(0);
+  const [maxHistory, setMaxHistory] = useState<MaxRecord[]>([]);
+  const [lastMaxResult, setLastMaxResult] = useState<{ holdSec: number; isNewBest: boolean; contractionSec?: number } | null>(null);
+
   const [soundMode, setSoundMode] = useState<SoundMode>("voice");
   const [walkPaceOn, setWalkPaceOn] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
@@ -78,12 +98,13 @@ export default function ApneaTrainer() {
   const [phase, setPhase] = useState<PhaseType>("prepare");
   const [remaining, setRemaining] = useState(30);
   const [phaseTotal, setPhaseTotal] = useState(30);
+  const [maxElapsed, setMaxElapsed] = useState(0); // 一発計測のカウントアップ秒数
   const [contractions, setContractions] = useState<Record<number, number>>({});
   const [totalSessions, setTotalSessions] = useState(0);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // 初回マウント時：保存された設定＆累計回数を復元
+  // 初回マウント時：保存された設定＆累計回数＆自己ベスト履歴を復元
   useEffect(() => {
     try {
       const savedStats = Number(localStorage.getItem(STATS_KEY) ?? "0");
@@ -91,13 +112,22 @@ export default function ApneaTrainer() {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setTotalSessions(savedStats);
       }
+      const rawMax = localStorage.getItem(MAX_KEY);
+      if (rawMax) {
+        const parsed = JSON.parse(rawMax);
+        if (typeof parsed.bestHoldSec === "number") setBestHoldSec(parsed.bestHoldSec);
+        if (Array.isArray(parsed.history)) setMaxHistory(parsed.history.slice(0, 5));
+      }
       const rawPrefs = localStorage.getItem(PREFS_KEY);
       if (rawPrefs) {
         const p = JSON.parse(rawPrefs);
-        if (p.mode === "o2" || p.mode === "co2" || p.mode === "stretch") setMode(p.mode);
+        if (p.mode === "o2" || p.mode === "co2" || p.mode === "max" || p.mode === "stretch") setMode(p.mode);
         if (typeof p.o2StartSec === "number" && p.o2StartSec >= 15 && p.o2StartSec <= 300) setO2StartSec(p.o2StartSec);
         if (["equal", "x1.5", "x2", "fixed60", "fixed90", "fixed120"].includes(p.restRule)) setRestRule(p.restRule);
-        if (typeof p.prepSec === "number" && p.prepSec >= 10 && p.prepSec <= 180) setPrepSec(p.prepSec);
+        if (typeof p.prepSec === "number" && [15, 30, 45, 60].includes(p.prepSec)) setPrepSec(p.prepSec);
+        if (typeof p.maxPrepSec === "number" && [15, 30, 90, 120].includes(p.maxPrepSec)) setMaxPrepSec(p.maxPrepSec);
+        if (typeof p.hideMaxTime === "boolean") setHideMaxTime(p.hideMaxTime);
+        if (p.maxNotify === 0 || p.maxNotify === 30 || p.maxNotify === 60) setMaxNotify(p.maxNotify);
         if (typeof p.co2HoldSec === "number" && p.co2HoldSec >= 30 && p.co2HoldSec <= 240) setCo2HoldSec(p.co2HoldSec);
         if (p.co2Sets === 6 || p.co2Sets === 8) setCo2Sets(p.co2Sets);
         if (p.stretchSets === 4 || p.stretchSets === 5) setStretchSets(p.stretchSets);
@@ -121,6 +151,9 @@ export default function ApneaTrainer() {
           o2StartSec,
           restRule,
           prepSec,
+          maxPrepSec,
+          hideMaxTime,
+          maxNotify,
           co2HoldSec,
           co2Sets,
           stretchSets,
@@ -131,12 +164,17 @@ export default function ApneaTrainer() {
     } catch {
       /* ignore */
     }
-  }, [prefsLoaded, mode, o2StartSec, restRule, prepSec, co2HoldSec, co2Sets, stretchSets, soundMode, walkPaceOn]);
+  }, [
+    prefsLoaded, mode, o2StartSec, restRule, prepSec, maxPrepSec,
+    hideMaxTime, maxNotify, co2HoldSec, co2Sets, stretchSets, soundMode, walkPaceOn,
+  ]);
 
   /** ラウンド一覧の生成 */
   const schedule = useMemo<RoundStep[]>(() => {
+    if (mode === "max") {
+      return [{ round: 1, breatheSec: maxPrepSec, holdSec: 0 }];
+    }
     if (mode === "o2") {
-      // 5セット: start, start+15, start+30, start+45, start+60
       return Array.from({ length: 5 }, (_, idx) => {
         const holdSec = o2StartSec + idx * 15;
         const prevHold = idx === 0 ? o2StartSec : o2StartSec + (idx - 1) * 15;
@@ -153,29 +191,25 @@ export default function ApneaTrainer() {
       });
     }
     if (mode === "co2") {
-      // 1セット目の前だけ prepSec、2セット目以降は 1:45 → 1:30 → 1:15 → 1:00 → 0:45 → 0:30 と15秒ずつ短縮
       return Array.from({ length: co2Sets }, (_, idx) => {
         const breatheSec = idx === 0 ? prepSec : Math.max(30, 120 - idx * 15);
         return { round: idx + 1, breatheSec, holdSec: co2HoldSec };
       });
     }
-    // stretch: 呼吸20秒 → 吐き切り10秒 → 引き込みキープ15秒
     return Array.from({ length: stretchSets }, (_, idx) => ({
       round: idx + 1,
       breatheSec: idx === 0 ? 15 : 20,
       exhaleSec: 10,
       holdSec: 15,
     }));
-  }, [mode, o2StartSec, restRule, prepSec, co2HoldSec, co2Sets, stretchSets]);
+  }, [mode, o2StartSec, restRule, prepSec, maxPrepSec, co2HoldSec, co2Sets, stretchSets]);
 
   const totalWorkoutSec = useMemo(
     () => schedule.reduce((acc, s) => acc + s.breatheSec + (s.exhaleSec ?? 0) + s.holdSec, 0),
     [schedule]
   );
 
-  /**
-   * 音割れしないソフトなチャイム音（フェードイン・指数減衰エンベロープ付き）
-   */
+  /** 音割れしないソフトなチャイム音（フェードイン・指数減衰エンベロープ付き） */
   const playSoftTone = useCallback(
     (freq = 587.33, durationMs = 160, peakGain = 0.08) => {
       if (soundMode === "mute" || typeof window === "undefined") return;
@@ -194,7 +228,6 @@ export default function ApneaTrainer() {
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, now);
 
-        // 急激な波形立ち上がりによる「プチッ・ガビガビ」という音割れを完全に防ぐエンベロープ
         gain.gain.setValueAtTime(0.0001, now);
         gain.gain.linearRampToValueAtTime(peakGain, now + 0.018);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
@@ -210,10 +243,7 @@ export default function ApneaTrainer() {
     [soundMode]
   );
 
-  /**
-   * 日本語音声ガイド（チャイムと同時に鳴らすとOSミキサーで音割れするため、
-   * 音声モード時はチャイムを重ねず単体・控えめ音量0.75でクリアに発声する）
-   */
+  /** 日本語音声ガイド（チャイムと同時再生しないことで音割れを防止） */
   const announce = useCallback(
     (text: string, fallbackBellFreq = 784) => {
       if (soundMode === "mute" || typeof window === "undefined") return;
@@ -226,7 +256,7 @@ export default function ApneaTrainer() {
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "ja-JP";
         u.rate = 1.0;
-        u.volume = 0.75; // 最大音量(1.0)だとスマホスピーカーで音割れしやすいため0.75に抑える
+        u.volume = 0.75;
         window.speechSynthesis.speak(u);
       } catch {
         playSoftTone(fallbackBellFreq, 240, 0.09);
@@ -244,7 +274,9 @@ export default function ApneaTrainer() {
     const first = schedule[0]?.breatheSec ?? 30;
     setRemaining(first);
     setPhaseTotal(first);
+    setMaxElapsed(0);
     setContractions({});
+    setLastMaxResult(null);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
@@ -255,29 +287,88 @@ export default function ApneaTrainer() {
     resetTimer();
   }, [resetTimer]);
 
-  /** 1秒ごとのカウントダウン進行 */
+  /** 一発計測のストップ（記録確定） */
+  const finishMaxHold = useCallback(() => {
+    if (mode !== "max" || phase !== "hold") return;
+    setRunning(false);
+    setCompleted(true);
+    const finalSec = maxElapsed;
+    const cSec = contractions[1];
+    const isNewBest = finalSec > bestHoldSec && finalSec >= 5;
+    const nextBest = isNewBest ? finalSec : bestHoldSec;
+
+    const now = new Date();
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const newRec: MaxRecord = { date: dateStr, holdSec: finalSec, contractionSec: cSec };
+    const nextHist = [newRec, ...maxHistory].slice(0, 5);
+
+    setBestHoldSec(nextBest);
+    setMaxHistory(nextHist);
+    setLastMaxResult({ holdSec: finalSec, isNewBest, contractionSec: cSec });
+
+    try {
+      localStorage.setItem(MAX_KEY, JSON.stringify({ bestHoldSec: nextBest, history: nextHist }));
+      const nextCount = totalSessions + 1;
+      setTotalSessions(nextCount);
+      localStorage.setItem(STATS_KEY, String(nextCount));
+    } catch {
+      /* ignore */
+    }
+
+    const min = Math.floor(finalSec / 60);
+    const sec = finalSec % 60;
+    const spoken = min > 0 ? `${min}分${sec > 0 ? `${sec}秒` : ""}` : `${sec}秒`;
+    announce(`計測終了。記録は${spoken}です`, 880);
+  }, [mode, phase, maxElapsed, contractions, bestHoldSec, maxHistory, totalSessions, announce]);
+
+  /** 1秒ごとのタイマー進行 */
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => {
+      // 一発計測モードのホールド中（カウントアップ）
+      if (mode === "max" && phase === "hold") {
+        setMaxElapsed((prev) => {
+          const next = prev + 1;
+          if (maxNotify > 0 && next % maxNotify === 0) {
+            const m = Math.floor(next / 60);
+            const s = next % 60;
+            const label = m > 0 ? `${m}分${s > 0 ? `${s}秒` : ""}経過` : `${s}秒経過`;
+            announce(label, 659.25);
+          } else if (walkPaceOn) {
+            playSoftTone(330, 45, 0.04);
+          }
+          return next;
+        });
+        return;
+      }
+
+      // 通常のカウントダウン進行
       setRemaining((prev) => {
         if (prev > 1) {
           const next = prev - 1;
-          // カウントダウン通知
-          if (next === 30 && phaseTotal >= 45) announce("30秒前", 523.25);
+          if (next === 90 && phaseTotal >= 110) announce("1分30秒前", 523.25);
+          else if (next === 60 && phaseTotal >= 80) announce("1分前", 523.25);
+          else if (next === 30 && phaseTotal >= 45) announce("30秒前", 523.25);
           else if (next === 15 && phaseTotal >= 25) announce("15秒前", 523.25);
           else if (next === 10 && phaseTotal >= 20) announce("10秒前", 523.25);
           else if (next <= 3 && next >= 1) {
             playSoftTone(523.25, 110, 0.07);
           } else if (phase === "hold" && walkPaceOn) {
-            // 歩行ペース用メトロノーム音（1秒1歩・柔らかいウッドブロック風）
             playSoftTone(330, 45, 0.04);
           }
           return next;
         }
 
-        // フェーズ切り替え（チャイムと音声を同時再生しないことで音割れを防止）
+        // フェーズ切り替え
         const curStep = schedule[roundIdx];
         if (!curStep) return 0;
+
+        if (mode === "max" && phase === "prepare") {
+          setPhase("hold");
+          setMaxElapsed(0);
+          announce("息止めスタート", 783.99);
+          return 0;
+        }
 
         if (mode === "stretch") {
           if (phase === "prepare") {
@@ -325,10 +416,21 @@ export default function ApneaTrainer() {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [running, phase, phaseTotal, roundIdx, schedule, mode, walkPaceOn, playSoftTone, announce]);
+  }, [running, phase, phaseTotal, roundIdx, schedule, mode, walkPaceOn, maxNotify, playSoftTone, announce]);
 
-  const elapsedInHold = phase === "hold" || phase === "vacuum" ? phaseTotal - remaining : 0;
-  const progress = phaseTotal > 0 ? ((phaseTotal - remaining) / phaseTotal) * 100 : 0;
+  const elapsedInHold =
+    mode === "max"
+      ? maxElapsed
+      : phase === "hold" || phase === "vacuum"
+        ? phaseTotal - remaining
+        : 0;
+
+  const progress =
+    mode === "max" && phase === "hold"
+      ? ((maxElapsed % 60) / 60) * 100
+      : phaseTotal > 0
+        ? ((phaseTotal - remaining) / phaseTotal) * 100
+        : 0;
 
   const toggleRun = () => {
     if (completed) {
@@ -336,11 +438,13 @@ export default function ApneaTrainer() {
       return;
     }
     if (!running) {
-      if (roundIdx === 0 && remaining === phaseTotal) {
+      if (roundIdx === 0 && phase === "prepare" && remaining === phaseTotal) {
         announce(
           mode === "stretch"
             ? "ストレッチを開始します"
-            : "スタートします。リラックスして呼吸してください",
+            : mode === "max"
+              ? "カウントダウンを開始します。呼吸を整えてください"
+              : "スタートします。リラックスして呼吸してください",
           659.25
         );
       } else {
@@ -381,24 +485,29 @@ export default function ApneaTrainer() {
         </ul>
       </div>
 
-      {/* メニュー選択タブ */}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3" role="tablist" aria-label="トレーニング種別">
+      {/* メニュー選択タブ（4モード） */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="トレーニング種別">
         {(
           [
             {
               id: "o2",
-              title: "① O2テーブル（5セット延長）",
-              sub: "0:30→1:30〜4:00→5:00まで15秒ずつ息止めを伸ばす実践メニュー",
+              title: "① O2テーブル",
+              sub: "5セットで15秒ずつ息止めを伸ばす練習",
             },
             {
               id: "co2",
-              title: "② CO2耐性テーブル（休憩短縮）",
-              sub: "息止め時間は一定のまま、休憩を少しずつ短くして苦しさに慣れるメニュー",
+              title: "② CO2テーブル",
+              sub: "息止め一定・休憩を短縮して苦しさに慣れる",
+            },
+            {
+              id: "max",
+              title: "③ 一発計測（記録測定）",
+              sub: "ストップを押すまで測る自己ベスト測定",
             },
             {
               id: "stretch",
-              title: "③ 横隔膜・胸郭ストレッチ",
-              sub: "息を吐き切ってお腹を引き込む固定ワークタイム（約3分半）",
+              title: "④ 横隔膜ストレッチ",
+              sub: "息を吐き切ってお腹を引き込む柔軟ワーク",
             },
           ] as const
         ).map((m) => (
@@ -408,14 +517,14 @@ export default function ApneaTrainer() {
             role="tab"
             aria-selected={mode === m.id}
             onClick={() => setMode(m.id)}
-            className={`rounded-2xl border p-3.5 text-left transition ${
+            className={`rounded-2xl border p-3 text-left transition ${
               mode === m.id
                 ? "border-sky-400 bg-sky-50/80 shadow-sm ring-2 ring-sky-200"
                 : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/30"
             }`}
           >
-            <p className="text-sm font-bold text-slate-800">{m.title}</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-500">{m.sub}</p>
+            <p className="text-xs font-bold text-slate-800 sm:text-sm">{m.title}</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-slate-500 sm:text-[11px]">{m.sub}</p>
           </button>
         ))}
       </div>
@@ -423,12 +532,34 @@ export default function ApneaTrainer() {
       <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr]">
         {/* 左カラム: タイマー本体 */}
         <section className="flex flex-col items-center justify-between rounded-3xl border border-sky-100 bg-white p-5 shadow-xl sm:p-7">
-          <div className="flex w-full items-center justify-between text-xs text-slate-500">
-            <span>
-              セット <b className="font-mono text-base text-slate-800">{roundIdx + 1}</b> / {schedule.length}
-              <span className="ml-2 text-slate-400">（全体 {fmt(totalWorkoutSec)}）</span>
-            </span>
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            {mode === "max" ? (
+              <span className="flex items-center gap-1 font-semibold text-slate-700">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                自己ベスト：<b className="font-mono text-sm text-sky-800">{bestHoldSec > 0 ? fmt(bestHoldSec) : "--:--"}</b>
+              </span>
+            ) : (
+              <span>
+                セット <b className="font-mono text-base text-slate-800">{roundIdx + 1}</b> / {schedule.length}
+                <span className="ml-1.5 text-slate-400">（計 {fmt(totalWorkoutSec)}）</span>
+              </span>
+            )}
             <div className="flex items-center gap-1.5">
+              {mode === "max" && (
+                <button
+                  type="button"
+                  onClick={() => setHideMaxTime((h) => !h)}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition ${
+                    hideMaxTime
+                      ? "bg-amber-50 text-amber-800 ring-amber-300"
+                      : "bg-slate-50 text-slate-600 ring-slate-200 hover:bg-slate-100"
+                  }`}
+                  title="息止め中のタイム表示のON/OFFを切り替えます"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  {hideMaxTime ? "タイム非表示" : "タイム表示あり"}
+                </button>
+              )}
               {mode !== "stretch" && (
                 <button
                   type="button"
@@ -441,7 +572,7 @@ export default function ApneaTrainer() {
                   title="息止め中に1秒1歩のペース音を鳴らし、歩数（秒数）を表示します"
                 >
                   <Footprints className="h-3.5 w-3.5" />
-                  歩行ペース音 {walkPaceOn ? "ON" : "OFF"}
+                  歩行音 {walkPaceOn ? "ON" : "OFF"}
                 </button>
               )}
               <button
@@ -485,7 +616,11 @@ export default function ApneaTrainer() {
                 cy="110"
                 r="96"
                 strokeDasharray={2 * Math.PI * 96}
-                strokeDashoffset={2 * Math.PI * 96 * (1 - progress / 100)}
+                strokeDashoffset={
+                  mode === "max" && phase === "hold" && hideMaxTime
+                    ? 0
+                    : 2 * Math.PI * 96 * (1 - progress / 100)
+                }
                 strokeLinecap="round"
                 className={`fill-none transition-all duration-500 ${
                   completed
@@ -499,7 +634,7 @@ export default function ApneaTrainer() {
                 strokeWidth="12"
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
               <span
                 className={`rounded-full px-3 py-0.5 text-xs font-bold ${
                   completed
@@ -514,30 +649,70 @@ export default function ApneaTrainer() {
                 }`}
               >
                 {completed
-                  ? "🎉 完了！"
+                  ? lastMaxResult?.isNewBest
+                    ? "🏆 自己ベスト更新！"
+                    : "🎉 完了！"
                   : phase === "hold"
-                    ? "🟧 息止め（ホールド）"
+                    ? mode === "max"
+                      ? "🟧 一発計測中（カウントアップ）"
+                      : "🟧 息止め（ホールド）"
                     : phase === "vacuum"
                       ? "🟧 息止め＋横隔膜引き上げ"
                       : phase === "exhale"
                         ? "🟩 息をすべて吐き切る"
-                        : "🟦 呼吸・リラックス"}
+                        : "🟦 準備呼吸・リラックス"}
               </span>
-              <p className="mt-2 font-mono text-6xl font-black tracking-tight text-slate-800">
-                {fmt(remaining)}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                {phase === "hold" || phase === "vacuum" ? (
-                  <>
-                    経過 <b className="font-mono text-slate-700">{fmt(elapsedInHold)}</b>
-                    {walkPaceOn && phase === "hold" && (
-                      <span className="ml-1.5 font-semibold text-teal-700">（目安 {elapsedInHold}歩）</span>
-                    )}
-                  </>
+
+              {/* メイン時計数字 */}
+              {mode === "max" && phase === "hold" ? (
+                hideMaxTime ? (
+                  <div className="mt-3 flex flex-col items-center">
+                    <Clock className="h-10 w-10 animate-pulse text-amber-500" />
+                    <p className="mt-1.5 text-sm font-bold text-slate-700">タイム非表示で計測中</p>
+                    <p className="text-[11px] text-slate-400">ストップを押すと記録が表示されます</p>
+                  </div>
                 ) : (
-                  <>次の息止め：{fmt(schedule[roundIdx]?.holdSec ?? 0)}</>
-                )}
-              </p>
+                  <>
+                    <p className="mt-2 font-mono text-6xl font-black tracking-tight text-slate-800">
+                      {fmt(maxElapsed)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {walkPaceOn ? `目安 ${maxElapsed}歩` : "ストップを押すまで計測します"}
+                    </p>
+                  </>
+                )
+              ) : mode === "max" && completed && lastMaxResult ? (
+                <>
+                  <p className="mt-2 font-mono text-6xl font-black tracking-tight text-emerald-700">
+                    {fmt(lastMaxResult.holdSec)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {lastMaxResult.contractionSec !== undefined
+                      ? `最初の苦しさ ${fmt(lastMaxResult.contractionSec)}（＋${lastMaxResult.holdSec - lastMaxResult.contractionSec}秒粘り）`
+                      : "今回の息止め記録"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 font-mono text-6xl font-black tracking-tight text-slate-800">
+                    {fmt(remaining)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {phase === "hold" || phase === "vacuum" ? (
+                      <>
+                        経過 <b className="font-mono text-slate-700">{fmt(elapsedInHold)}</b>
+                        {walkPaceOn && phase === "hold" && (
+                          <span className="ml-1.5 font-semibold text-teal-700">（目安 {elapsedInHold}歩）</span>
+                        )}
+                      </>
+                    ) : mode === "max" ? (
+                      <>0:00で息止め計測スタート</>
+                    ) : (
+                      <>次の息止め：{fmt(schedule[roundIdx]?.holdSec ?? 0)}</>
+                    )}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -551,25 +726,38 @@ export default function ApneaTrainer() {
             >
               <Zap className="h-3.5 w-3.5" />
               {contractions[roundIdx + 1] !== undefined
-                ? `最初の苦しさ記録済み：${fmt(contractions[roundIdx + 1])}（再タップで上書き）`
+                ? mode === "max" && hideMaxTime && !completed
+                  ? "最初の苦しさ：記録済み（終了後に表示）"
+                  : `最初の苦しさ記録済み：${fmt(contractions[roundIdx + 1])}`
                 : "息止め中に「最初の苦しさ」が来たらタップ"}
             </button>
           )}
 
-          {/* 開始・一時停止・リセットボタン */}
+          {/* 開始・ストップ・一時停止・リセットボタン */}
           <div className="flex w-full max-w-xs items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleRun}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-98 ${
-                running
-                  ? "bg-amber-500 hover:bg-amber-600"
-                  : "bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600"
-              }`}
-            >
-              {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {completed ? "もう一度行う" : running ? "一時停止" : "スタート"}
-            </button>
+            {mode === "max" && phase === "hold" && running ? (
+              <button
+                type="button"
+                onClick={finishMaxHold}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-500 px-5 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-rose-600 active:scale-98"
+              >
+                <Square className="h-4 w-4 fill-white" />
+                ストップ（息止め終了）
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleRun}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-98 ${
+                  running
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600"
+                }`}
+              >
+                {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {completed ? "もう一度行う" : running ? "一時停止" : "スタート"}
+              </button>
+            )}
             <button
               type="button"
               onClick={resetTimer}
@@ -664,21 +852,23 @@ export default function ApneaTrainer() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
-                  <span>1セット目の前の準備呼吸：</span>
-                  {PREP_OPTIONS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      disabled={running}
-                      onClick={() => setPrepSec(s)}
-                      className={`rounded-lg px-2.5 py-1 font-mono text-xs font-semibold ${
-                        prepSec === s ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      } disabled:opacity-50`}
-                    >
-                      {fmt(s)}
-                    </button>
-                  ))}
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-semibold text-slate-600">1セット目の前の準備呼吸（開始カウントダウン）：</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {PREP_OPTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={running}
+                        onClick={() => setPrepSec(s)}
+                        className={`rounded-xl py-2 font-mono text-xs font-bold transition ${
+                          prepSec === s ? "bg-sky-500 text-white shadow-xs" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        } disabled:opacity-50`}
+                      >
+                        {fmt(s)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -749,16 +939,44 @@ export default function ApneaTrainer() {
                     </button>
                   </div>
                 </div>
-                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
-                  <span>1セット目の前の準備呼吸：</span>
-                  {PREP_OPTIONS.map((s) => (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-semibold text-slate-600">1セット目の前の準備呼吸（開始カウントダウン）：</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {PREP_OPTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={running}
+                        onClick={() => setPrepSec(s)}
+                        className={`rounded-xl py-2 font-mono text-xs font-bold transition ${
+                          prepSec === s ? "bg-sky-500 text-white shadow-xs" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        } disabled:opacity-50`}
+                      >
+                        {fmt(s)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mode === "max" && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">1. 計測前の準備カウントダウン</h3>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  すぐ始めたい時は0:15/0:30、本番と同じようにじっくり呼吸を整えてから測る時は1:30/2:00を選びます。
+                </p>
+                <div className="mt-2 grid grid-cols-4 gap-1.5">
+                  {MAX_PREP_OPTIONS.map((s) => (
                     <button
                       key={s}
                       type="button"
                       disabled={running}
-                      onClick={() => setPrepSec(s)}
-                      className={`rounded-lg px-2.5 py-1 font-mono text-xs font-semibold ${
-                        prepSec === s ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      onClick={() => setMaxPrepSec(s)}
+                      className={`rounded-xl py-2 font-mono text-xs font-bold transition ${
+                        maxPrepSec === s ? "bg-sky-500 text-white shadow-xs" : "bg-sky-50 text-slate-700 hover:bg-sky-100"
                       } disabled:opacity-50`}
                     >
                       {fmt(s)}
@@ -766,6 +984,109 @@ export default function ApneaTrainer() {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">2. 息止め中の画面表示・経過通知</h3>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  時計の数字を見ると意識して苦しくなりやすい方は「タイム非表示」にするとリラックスして記録が伸びやすくなります。
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHideMaxTime(false)}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition ${
+                      !hideMaxTime
+                        ? "bg-sky-500 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Clock className="h-4 w-4" />
+                    タイム表示あり
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHideMaxTime(true)}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition ${
+                      hideMaxTime
+                        ? "bg-amber-500 text-white shadow-xs"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Clock className="h-4 w-4" />
+                    タイム非表示（計測後に表示）
+                  </button>
+                </div>
+
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-semibold text-slate-600">息止め中の経過時間の音声通知：</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(
+                      [
+                        [0, "通知なし（集中）"],
+                        [30, "30秒ごと"],
+                        [60, "1分ごと"],
+                      ] as const
+                    ).map(([sec, label]) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => setMaxNotify(sec)}
+                        className={`rounded-xl py-2 text-xs font-bold transition ${
+                          maxNotify === sec
+                            ? "bg-teal-500 text-white shadow-xs"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {bestHoldSec > 0 && (
+                <div className="rounded-2xl bg-sky-50/70 p-3 text-xs text-slate-700">
+                  <p className="font-bold text-sky-900">
+                    🏆 現在の自己ベスト：{fmt(bestHoldSec)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-600">
+                    → CO2テーブルのおすすめ固定秒数（約55%）：
+                    <b className="ml-1 font-mono text-sky-800">
+                      {fmt(Math.max(30, Math.round((bestHoldSec * 0.55) / 15) * 15))}
+                    </b>
+                  </p>
+                </div>
+              )}
+
+              {maxHistory.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-slate-100">
+                  <table className="w-full text-center text-xs">
+                    <thead className="bg-slate-50 text-[11px] text-slate-500">
+                      <tr>
+                        <th className="py-2 font-semibold">測定日時</th>
+                        <th className="py-2 font-semibold">息止め記録</th>
+                        <th className="py-2 font-semibold">最初の苦しさ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {maxHistory.map((h, i) => (
+                        <tr key={h.date + i} className="text-slate-700">
+                          <td className="py-2 font-mono text-[11px] text-slate-500">{h.date}</td>
+                          <td className="py-2 font-mono font-bold text-amber-700">
+                            {fmt(h.holdSec)}
+                            {h.holdSec === bestHoldSec && (
+                              <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-800">BEST</span>
+                            )}
+                          </td>
+                          <td className="py-2 font-mono text-[11px] text-slate-500">
+                            {h.contractionSec !== undefined ? fmt(h.contractionSec) : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -804,50 +1125,52 @@ export default function ApneaTrainer() {
             </div>
           )}
 
-          {/* ラウンド一覧テーブル */}
-          <div className="overflow-hidden rounded-2xl border border-slate-100">
-            <table className="w-full text-center text-xs">
-              <thead className="bg-slate-50 text-[11px] text-slate-500">
-                <tr>
-                  <th className="py-2 font-semibold">セット</th>
-                  <th className="py-2 font-semibold">{mode === "stretch" ? "呼吸 → 吐き切り" : "呼吸（休憩）"}</th>
-                  <th className="py-2 font-semibold">{mode === "stretch" ? "引き込みキープ" : "息止め"}</th>
-                  {mode !== "stretch" && <th className="py-2 font-semibold">最初の苦しさ</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {schedule.map((s, idx) => {
-                  const active = idx === roundIdx && !completed;
-                  const done = completed || idx < roundIdx;
-                  return (
-                    <tr
-                      key={s.round}
-                      className={active ? "bg-sky-50/90 font-bold text-sky-900" : done ? "bg-emerald-50/30 text-slate-400" : "text-slate-700"}
-                    >
-                      <td className="py-2 font-mono">
-                        #{s.round} {done && "✓"}
-                      </td>
-                      <td className="py-2 font-mono text-sky-700">
-                        {fmt(s.breatheSec)}
-                        {s.exhaleSec ? ` → ${fmt(s.exhaleSec)}` : ""}
-                      </td>
-                      <td className="py-2 font-mono font-bold text-amber-700">
-                        {fmt(s.holdSec)}
-                        {walkPaceOn && mode !== "stretch" && (
-                          <span className="ml-1 text-[10px] font-normal text-teal-600">({s.holdSec}歩)</span>
-                        )}
-                      </td>
-                      {mode !== "stretch" && (
-                        <td className="py-2 font-mono text-[11px] text-slate-500">
-                          {contractions[s.round] !== undefined ? fmt(contractions[s.round]) : "-"}
+          {/* ラウンド一覧テーブル（O2 / CO2 / Stretch 時） */}
+          {mode !== "max" && (
+            <div className="overflow-hidden rounded-2xl border border-slate-100">
+              <table className="w-full text-center text-xs">
+                <thead className="bg-slate-50 text-[11px] text-slate-500">
+                  <tr>
+                    <th className="py-2 font-semibold">セット</th>
+                    <th className="py-2 font-semibold">{mode === "stretch" ? "呼吸 → 吐き切り" : "呼吸（休憩）"}</th>
+                    <th className="py-2 font-semibold">{mode === "stretch" ? "引き込みキープ" : "息止め"}</th>
+                    {mode !== "stretch" && <th className="py-2 font-semibold">最初の苦しさ</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {schedule.map((s, idx) => {
+                    const active = idx === roundIdx && !completed;
+                    const done = completed || idx < roundIdx;
+                    return (
+                      <tr
+                        key={s.round}
+                        className={active ? "bg-sky-50/90 font-bold text-sky-900" : done ? "bg-emerald-50/30 text-slate-400" : "text-slate-700"}
+                      >
+                        <td className="py-2 font-mono">
+                          #{s.round} {done && "✓"}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="py-2 font-mono text-sky-700">
+                          {fmt(s.breatheSec)}
+                          {s.exhaleSec ? ` → ${fmt(s.exhaleSec)}` : ""}
+                        </td>
+                        <td className="py-2 font-mono font-bold text-amber-700">
+                          {fmt(s.holdSec)}
+                          {walkPaceOn && mode !== "stretch" && (
+                            <span className="ml-1 text-[10px] font-normal text-teal-600">({s.holdSec}歩)</span>
+                          )}
+                        </td>
+                        {mode !== "stretch" && (
+                          <td className="py-2 font-mono text-[11px] text-slate-500">
+                            {contractions[s.round] !== undefined ? fmt(contractions[s.round]) : "-"}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </div>
