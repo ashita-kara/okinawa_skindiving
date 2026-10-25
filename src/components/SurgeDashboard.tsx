@@ -209,10 +209,10 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
               <Waves className="h-4 w-4" /> 沖縄スキンダイビング
             </p>
             <h1 className="mt-1 bg-gradient-to-r from-sky-700 via-cyan-600 to-teal-500 bg-clip-text text-2xl font-extrabold text-transparent sm:mt-2 sm:text-5xl">
-              海中うねり（底揺れ）予報
+              底揺れ・海況ナビ
             </h1>
             <p className="mt-2 max-w-2xl text-xs text-slate-500 sm:mt-3 sm:text-sm">
-              Open-Meteo Marine のうねりデータに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、水中で体が振られる幅を算出します。
+              Open-Meteo の公開数値データに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、海中で体が振られる幅の目安（指数）を算出します。
             </p>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
           <div>
             <label htmlFor="time-slider" className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-              <Clock className="h-3.5 w-3.5" /> 予報日時
+              <Clock className="h-3.5 w-3.5" /> 対象日時
               <span className="font-mono text-base font-semibold text-sky-700">{formatTime(currentTime)}</span>
             </label>
             <input
@@ -358,7 +358,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
                   id={`card-${p.id}`}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${p.name}${p.subName ? ` ${p.subName}` : ""}の時間別予報を開く`}
+                  aria-label={`${p.name}${p.subName ? ` ${p.subName}` : ""}の時間別目安を開く`}
                   onClick={() => openDrawer(p)}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openDrawer(p))}
                   className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border bg-white p-5 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-2xl focus-visible:outline-2 focus-visible:outline-sky-500 ${drawerOpen && selectedPoint?.id === p.id ? "border-sky-400 ring-2 ring-sky-300" : "border-sky-100"} ${st.glow}`}
@@ -403,7 +403,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
                   <div className="mt-4 flex items-center gap-4">
                     <div className="flex-1">
-                      <p className="text-[11px] text-slate-500">海中の振られ幅</p>
+                      <p className="text-[11px] text-slate-500">海中の振られ幅（目安）</p>
                       <p className="font-mono text-5xl font-black tracking-tight text-sky-900">
                         {hasData ? ev.bottomSurgeCm : "--"}
                         <span className="ml-1 text-lg font-semibold text-slate-500">cm</span>
@@ -488,7 +488,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
         <footer className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
           Data: Open-Meteo Marine / Forecast API（1時間キャッシュ）・潮位: 気象庁 潮位表（那覇）<br />
-          本予報は目安です。離岸流の表示は発生しやすさの注意喚起であり、安全を保証するものではありません。現地の状況を必ず確認してください。
+          ※本サービスは気象業務法に基づく独自の気象・波浪予報業務を行うものではありません。公開数値データと各ポイントの地形条件（水深・開口方位）から算出した参考指数・目安を表示するナビゲーションツールです。離岸流・底揺れ・透明度の表示は安全を保証するものではないため、必ず現地の状況を確認してください。
         </footer>
       </main>
 

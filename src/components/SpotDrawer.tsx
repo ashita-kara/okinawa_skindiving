@@ -138,7 +138,7 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
         id="spot-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label={point ? `${point.name}の時間別予報` : "時間別予報"}
+        aria-label={point ? `${point.name}の時間別目安` : "時間別目安"}
         className={`fixed bottom-0 left-0 right-0 z-50 flex max-h-[92dvh] flex-col rounded-t-3xl border-t border-sky-100 bg-white pb-2 shadow-2xl transition-transform duration-300 ease-out md:max-h-[85vh] md:pb-4 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
@@ -204,7 +204,7 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
             {/* タイムテーブル */}
             <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
               {cols.length === 0 ? (
-                <p className="p-6 text-sm text-slate-500">予報データがありません。</p>
+                <p className="p-6 text-sm text-slate-500">データがありません。</p>
               ) : (
                 <table className="border-separate border-spacing-0 text-center">
                   <tbody>

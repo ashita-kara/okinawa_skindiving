@@ -240,7 +240,7 @@ export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props)
             <span key={n} className={`rounded px-1.5 py-0.5 font-semibold ${TIDE_NAME_STYLE[n]}`}>{n}</span>
           ))}
           <span className="flex items-center gap-1 text-slate-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />予報期間
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />データ期間
           </span>
         </div>
       </section>
