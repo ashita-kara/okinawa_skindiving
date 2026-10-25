@@ -144,20 +144,20 @@ export function calculateUnderwaterSurge(
 
   let status: SwellEvaluation["status"] = "calm";
   let label = "穏やか（快適）";
-  let advice = "底揺れはほぼありません。スキンダイビングに最適なコンディションです。";
+  let advice = "底揺れはほぼありません。波酔いの心配もなくスキンダイビングに最適なコンディションです。";
 
-  if (bottomSurgeCm >= 65) {
+  if (bottomSurgeCm >= 40) {
     status = "danger";
     label = "潜水危険（強い底揺れ）";
-    advice = `水深${point.targetDepth}mで体が約${bottomSurgeCm}cm振られます。岩場への接触危険・激しい砂巻き上げあり。`;
-  } else if (bottomSurgeCm >= 35) {
+    advice = `水深${point.targetDepth}mで約${bottomSurgeCm}cmの強い揺れ。岩場への接触危険・激しい砂巻き上げと波酔いリスクあり。`;
+  } else if (bottomSurgeCm >= 23) {
     status = "caution";
-    label = "底揺れ注意（中級者以上）";
-    advice = `水深${point.targetDepth}mで約${bottomSurgeCm}cmの揺れ。浅場のクレバスやリーフエッジの接近に注意。`;
-  } else if (bottomSurgeCm >= 15) {
+    label = "注意（波酔い・底揺れ警戒）";
+    advice = `水深${point.targetDepth}mで約${bottomSurgeCm}cmの揺れ。うねりで体が振られ、波酔いや浅場の砂巻き上げが起きやすい状態です。`;
+  } else if (bottomSurgeCm >= 10) {
     status = "moderate";
-    label = "やや揺れあり（潜水可能）";
-    advice = `水深${point.targetDepth}mで${bottomSurgeCm}cm程度の軽い揺れを感じますが、問題なく潜れます。`;
+    label = "やや揺れ（潜水可能）";
+    advice = `水深${point.targetDepth}mで${bottomSurgeCm}cm程度の揺れを感じますが潜水可能です。酔いやすい方は水面での長居に注意。`;
   }
 
   return {
