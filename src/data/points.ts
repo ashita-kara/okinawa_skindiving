@@ -135,10 +135,11 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.70,
     hasOuterReef: true,
-    bottomType: "coral_sand",
+    bottomType: "fine_sand",
     riverImpact: "low",
     reefThresholdCm: 100,
-    note: "北風に強い南部の定番ビーチ。インリーフは浅く穏やかで初心者や練習にも適する。"
+    reefStagnation: 0.80,
+    note: "北風に強い南部の定番ビーチ。インリーフは遠浅で穏やかだが、沖のアウトリーフまで距離があり細かい砂や海草帯が広がるため、一度濁ると白濁り・微濁りが抜けにくい。"
   },
   {
     id: "oujima-out",
