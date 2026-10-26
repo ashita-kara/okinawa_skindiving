@@ -11,6 +11,7 @@ import {
 } from "@/lib/swellCalc";
 import {
   calculateTurbidity,
+  getRecentMaxWave,
   TURBIDITY_META,
   type TurbidityEvaluation,
 } from "@/lib/turbidityCalc";
@@ -68,9 +69,10 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
         const sp = hourly.swellPeriod[i] ?? null;
         const sd = hourly.swellDirection[i] ?? null;
         const rain24h = hourly.past24hRainMm[i] ?? null;
+        const recentWave = getRecentMaxWave(hourly, i, 12);
         const tideIn = getTideInput(tide, t);
         const ev = calculateUnderwaterSurge(sh, sp, sd, point, tideIn);
-        const tb = calculateTurbidity(point, ev.bottomSurgeCm, rain24h, tideIn.deltaCm, t);
+        const tb = calculateTurbidity(point, ev.bottomSurgeCm, rain24h, tideIn.deltaCm, t, recentWave, tideIn.tideCm);
         return {
           t,
           i,
@@ -110,7 +112,9 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
       ev.bottomSurgeCm,
       hourly.past24hRainMm[hourIdx] ?? null,
       tideIn.deltaCm,
-      t
+      t,
+      getRecentMaxWave(hourly, hourIdx, 12),
+      tideIn.tideCm
     );
     return { ev, tb };
   }, [point, hourly, tide, hourIdx]);

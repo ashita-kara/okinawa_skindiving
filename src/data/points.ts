@@ -19,6 +19,11 @@ export interface DivePoint {
   bottomType: "rock" | "coral_sand" | "fine_sand";
   /** 雨のときの河川・排水・淡水流入の影響度 */
   riverImpact: "none" | "low" | "high";
+  /**
+   * 複雑リーフ・閉鎖イノーによる海水の滞留度（0.0=外洋直結で即回復 〜 1.0=複雑なリーフ奥で白濁りがすぐには抜けない）
+   * 未指定時は hasOuterReef と reefProtection から自動算出
+   */
+  reefStagnation?: number;
   note: string;             // カレント・濁り・地形の固定アドバイス
 }
 
@@ -37,10 +42,11 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 65,
     reefProtection: 0.75,
     hasOuterReef: true,
-    bottomType: "coral_sand",
+    bottomType: "fine_sand",
     riverImpact: "low",
     reefThresholdCm: 120,
-    note: "最も浅くリーフに守られたエリア。干潮前後は外洋のうねりをほぼ完全にブロックする。"
+    reefStagnation: 0.95,
+    note: "最も浅くリーフに守られ底揺れはほぼ無いが、アウトリーフまでに複雑なリーフが連なるため海水の入れ替わりが遅く、一度出た白濁りがすぐには回復しにくい。"
   },
   {
     id: "odo-pool2",
@@ -55,10 +61,11 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.65,
     hasOuterReef: true,
-    bottomType: "coral_sand",
+    bottomType: "fine_sand",
     riverImpact: "low",
     reefThresholdCm: 105,
-    note: "熱帯魚が多いメインのイノー。満潮時で南うねりが強い日は水路から流れが入るので注意。"
+    reefStagnation: 0.85,
+    note: "熱帯魚が多いメインのイノー。アウトリーフまでの複雑なリーフで海水交換が遅く弱めの白濁りが残りやすい。満潮時で南うねりが強い日は水路から流れが入るので注意。"
   },
   {
     id: "odo-pool3",
@@ -76,7 +83,8 @@ export const DIVE_POINTS: DivePoint[] = [
     bottomType: "coral_sand",
     riverImpact: "low",
     reefThresholdCm: 90,
-    note: "沖のリーフ切れ目に近く、下げ潮時は沖向きのカレント（離岸流）が発生しやすい。"
+    reefStagnation: 0.55,
+    note: "沖のリーフ切れ目に近く、下げ潮時は第1・第2プール側の濁り水とともに沖向きのカレント（離岸流）が発生しやすい。"
   },
   {
     id: "odo-pool4",
@@ -94,6 +102,7 @@ export const DIVE_POINTS: DivePoint[] = [
     bottomType: "coral_sand",
     riverImpact: "low",
     reefThresholdCm: 80,
+    reefStagnation: 0.25,
     note: "外洋との水交換が良く透明度が高い分、うねりがある日は流れと揺れが入りやすい。"
   },
   {

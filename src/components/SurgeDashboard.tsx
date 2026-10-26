@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { DIVE_POINTS, type AreaCategory, type DivePoint } from "@/data/points";
 import { calculateUnderwaterSurge, getAngleDiff, type SwellEvaluation } from "@/lib/swellCalc";
-import { calculateTurbidity, TURBIDITY_META } from "@/lib/turbidityCalc";
+import { calculateTurbidity, getRecentMaxWave, TURBIDITY_META } from "@/lib/turbidityCalc";
 import type { MarineResult } from "@/lib/fetchMarineData";
 import { getTideInput, moonEmoji, type TideData } from "@/lib/tideCalc";
 
@@ -179,8 +179,9 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         const sd = h?.swellDirection[hourIdx] ?? null;
         const wh = h?.waveHeight[hourIdx] ?? null;
         const rain24h = h?.past24hRainMm[hourIdx] ?? null;
+        const recentWave = getRecentMaxWave(h, hourIdx, 12);
         const ev = calculateUnderwaterSurge(sh, sp, sd, p, tideInput);
-        const tb = calculateTurbidity(p, ev.bottomSurgeCm, rain24h, tideInput.deltaCm, currentTime);
+        const tb = calculateTurbidity(p, ev.bottomSurgeCm, rain24h, tideInput.deltaCm, currentTime, recentWave, tideInput.tideCm);
         return { p, sh, sp, sd, wh, ev, tb, hasData: !!h };
       }),
     [data, visiblePoints, hourIdx, tideInput, currentTime]
