@@ -203,7 +203,7 @@ export default function ApneaTrainer() {
     }
     return Array.from({ length: stretchSets }, (_, idx) => ({
       round: idx + 1,
-      breatheSec: idx === 0 ? 15 : 20,
+      breatheSec: 20,
       exhaleSec: 10,
       holdSec: 15,
     }));
@@ -1145,7 +1145,7 @@ export default function ApneaTrainer() {
                       stretchSets === n ? "bg-teal-500 text-white" : "bg-slate-100 text-slate-600"
                     } disabled:opacity-50`}
                   >
-                    {n}セット（約{fmt(n * 45 - 5)}）
+                    {n}セット（約{fmt(n * 45)}）
                   </button>
                 ))}
               </div>
