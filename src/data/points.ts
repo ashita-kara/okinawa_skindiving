@@ -24,6 +24,12 @@ export interface DivePoint {
    * 未指定時は hasOuterReef と reefProtection から自動算出
    */
   reefStagnation?: number;
+  /**
+   * 透明度の上限ランク。"good" のポイントは「💎 クリア」を表示せず「💧 良好」止まりにする。
+   * 未指定時: 本島の砂地ポイント（coral_sand / fine_sand）は "good"、岩礁や離島（慶良間・宮古・石垣）は "clear"。
+   * 砂の舞う海岸に隣接するアウトリーフなど、底質が岩でも本島の岩礁ポイントほど抜けない場所は明示的に "good" を指定する。
+   */
+  clarityCap?: "clear" | "good";
   note: string;             // カレント・濁り・地形の固定アドバイス
 }
 
@@ -120,7 +126,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。"
+    clarityCap: "good",
+    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。岸側の砂地イノーの水が流れ出るため、真栄田岬などの岩礁ポイントほどの透明度にはなりにくい。"
   },
   {
     id: "oujima-in",

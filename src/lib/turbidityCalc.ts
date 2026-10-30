@@ -63,6 +63,15 @@ export function getRecentMaxWave(
   return found ? max : null;
 }
 
+const OUTER_ISLAND_AREAS: DivePoint["area"][] = ["慶良間", "宮古", "石垣"];
+
+/** 透明度の上限ランク（明示指定がなければ底質とエリアから決定） */
+export function getClarityCap(point: DivePoint): "clear" | "good" {
+  if (point.clarityCap) return point.clarityCap;
+  if (point.bottomType === "rock") return "clear";
+  return OUTER_ISLAND_AREAS.includes(point.area) ? "clear" : "good";
+}
+
 export function calculateTurbidity(
   point: DivePoint,
   bottomSurgeCm: number,
@@ -128,7 +137,15 @@ export function calculateTurbidity(
     reasons.push("春濁りシーズン（プランクトン傾向）");
   }
 
-  const score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
+  let score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
+
+  // 6. 透明度の上限（砂の舞う本島の海岸は、岩礁・離島ポイントの「クリア」には届きにくい）
+  const cap = getClarityCap(point);
+  if (cap === "good" && score < 20) {
+    score = 20;
+    reasons.push("砂地の海岸のため岩礁ポイントほどの透明度には届きにくい");
+  }
+
   const status: TurbidityStatus = score >= 65 ? "poor" : score >= 40 ? "cloudy" : score >= 20 ? "good" : "clear";
   return { score, status, reasons };
 }

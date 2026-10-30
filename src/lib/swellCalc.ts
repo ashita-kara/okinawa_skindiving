@@ -71,6 +71,24 @@ export function isReefShielded(point: DivePoint, tideCm: number | null): boolean
 }
 
 /**
+ * 満潮時のリーフ越波率 (0〜1)。
+ * 潮位がリーフ天井（reefThresholdCm）を越えた量に応じて増え、+40cmで最大。
+ * アウターリーフに守られた水深4m以下の浅いインリーフのみ対象。
+ */
+export function getReefOvertopRatio(point: DivePoint, tideCm: number | null): number {
+  if (
+    !point.hasOuterReef ||
+    point.reefThresholdCm === undefined ||
+    tideCm === null ||
+    point.targetDepth > 4 ||
+    tideCm <= point.reefThresholdCm
+  ) {
+    return 0;
+  }
+  return Math.min(1, (tideCm - point.reefThresholdCm) / 40);
+}
+
+/**
  * 離岸流（リーフカレント）注意報。
  * リーフ型ポイント（reefThresholdCm 設定あり）のみ対象。
  * ※流速の断定はせず「発生しやすい状態」の注意喚起に留める。
@@ -139,7 +157,13 @@ export function calculateUnderwaterSurge(
   const k = (2 * Math.PI) / Math.max(L, 1);
 
   const periodBoost = rawSwellPeriod >= 8 ? 1 + (rawSwellPeriod - 8) * 0.08 : 1.0;
-  const surgeMeters = effectiveSwellHeight * Math.exp(-k * point.targetDepth) * periodBoost;
+
+  // 満潮時のリーフ越波：潮位がリーフ天井を越えると、沖からの弱い波がリーフ上で砕けて段波となり、
+  // 浅いインリーフ（水深4m以下）に入って前後に押し引きする「うねり感」として再形成される
+  const overtop = getReefOvertopRatio(point, tideCm);
+  const overtopBoost = 1 + overtop * 0.6;
+
+  const surgeMeters = effectiveSwellHeight * Math.exp(-k * point.targetDepth) * periodBoost * overtopBoost;
   const bottomSurgeCm = Math.round(surgeMeters * 100);
 
   let status: SwellEvaluation["status"] = "calm";
@@ -158,6 +182,10 @@ export function calculateUnderwaterSurge(
     status = "moderate";
     label = "やや揺れ（潜水可能）";
     advice = `水深${point.targetDepth}mで${bottomSurgeCm}cm程度の揺れを感じますが潜水可能です。酔いやすい方は水面での長居に注意。`;
+  }
+
+  if (overtop >= 0.5 && bottomSurgeCm >= 5) {
+    advice += " 満潮でリーフを越えた波が浅いインリーフ内で押し引きのうねりになりやすい時間帯です。";
   }
 
   return {
