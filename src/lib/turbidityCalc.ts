@@ -65,11 +65,15 @@ export function getRecentMaxWave(
 
 const OUTER_ISLAND_AREAS: DivePoint["area"][] = ["慶良間", "宮古", "石垣"];
 
-/** 透明度の上限ランク（明示指定がなければ底質とエリアから決定） */
-export function getClarityCap(point: DivePoint): "clear" | "good" {
-  if (point.clarityCap) return point.clarityCap;
-  if (point.bottomType === "rock") return "clear";
-  return OUTER_ISLAND_AREAS.includes(point.area) ? "clear" : "good";
+/** 砂の舞いやすい海岸で「クリア」を出す条件 */
+const STRICT_CLEAR_MAX_SCORE = 6; // 通常は20未満でクリア
+const STRICT_CLEAR_MAX_WAVE_M = 0.6; // 直近12時間の最大波高
+
+/** 「クリア」判定をシビアにするポイントか（明示指定がなければ底質とエリアから決定） */
+export function isClarityStrict(point: DivePoint): boolean {
+  if (point.clarityStrict !== undefined) return point.clarityStrict;
+  if (point.bottomType === "rock") return false;
+  return !OUTER_ISLAND_AREAS.includes(point.area);
 }
 
 export function calculateTurbidity(
@@ -139,11 +143,15 @@ export function calculateTurbidity(
 
   let score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
 
-  // 6. 透明度の上限（砂の舞う本島の海岸は、岩礁・離島ポイントの「クリア」には届きにくい）
-  const cap = getClarityCap(point);
-  if (cap === "good" && score < 20) {
-    score = 20;
-    reasons.push("砂地の海岸のため岩礁ポイントほどの透明度には届きにくい");
+  // 6. 砂の舞いやすい海岸は「クリア」の条件をシビアにする
+  //    （直近12時間の波が小さく・雨がなく・濁り要因がほぼゼロの日だけクリア。それ以外は「良好」止まり）
+  if (isClarityStrict(point) && score < 20) {
+    const calmSea = (recentWaveM ?? 1) <= STRICT_CLEAR_MAX_WAVE_M;
+    const noRain = (rain24hMm ?? 0) < 5;
+    if (!(score < STRICT_CLEAR_MAX_SCORE && calmSea && noRain)) {
+      score = 20;
+      reasons.push("砂の舞いやすい海岸のため、ベタ凪が続いた日以外はクリアまで届きにくい");
+    }
   }
 
   const status: TurbidityStatus = score >= 65 ? "poor" : score >= 40 ? "cloudy" : score >= 20 ? "good" : "clear";

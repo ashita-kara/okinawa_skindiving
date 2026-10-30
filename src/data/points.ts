@@ -25,11 +25,12 @@ export interface DivePoint {
    */
   reefStagnation?: number;
   /**
-   * 透明度の上限ランク。"good" のポイントは「💎 クリア」を表示せず「💧 良好」止まりにする。
-   * 未指定時: 本島の砂地ポイント（coral_sand / fine_sand）は "good"、岩礁や離島（慶良間・宮古・石垣）は "clear"。
-   * 砂の舞う海岸に隣接するアウトリーフなど、底質が岩でも本島の岩礁ポイントほど抜けない場所は明示的に "good" を指定する。
+   * 「クリア」判定をシビアにするか（砂の舞いやすい海岸）。true の場合、直近の波が小さく雨もない
+   * ベタ凪の日だけ「💎 クリア」、それ以外は「💧 良好」止まりになる。
+   * 未指定時: 本島の砂地ポイント（coral_sand / fine_sand）は true、岩礁や離島（慶良間・宮古・石垣）は false。
+   * 砂の舞う海岸に隣接するアウトリーフなど、底質が岩でも本島の岩礁ポイントほど抜けない場所は明示的に true を指定する。
    */
-  clarityCap?: "clear" | "good";
+  clarityStrict?: boolean;
   note: string;             // カレント・濁り・地形の固定アドバイス
 }
 
@@ -126,8 +127,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    clarityCap: "good",
-    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。岸側の砂地イノーの水が流れ出るため、真栄田岬などの岩礁ポイントほどの透明度にはなりにくい。"
+    clarityStrict: true,
+    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。岸側の砂地イノーの水が流れ出るため、ベタ凪が続いた日以外は真栄田岬などの岩礁ポイントほどの透明度にはなりにくい。"
   },
   {
     id: "oujima-in",
@@ -163,7 +164,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "low",
-    note: "南〜南東のうねりに敏感。リーフエッジ付近は潮通しと引き換えに波の押し引きが強まる。"
+    clarityStrict: true,
+    note: "南〜南東のうねりに敏感。リーフエッジ付近は潮通しと引き換えに波の押し引きが強まる。岸側の砂地イノーの水が流れ出るため、ベタ凪が続いた日以外は岩礁ポイントほどの透明度にはなりにくい。"
   },
   {
     id: "gushikawa-castle",
