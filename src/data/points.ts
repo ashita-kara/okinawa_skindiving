@@ -68,11 +68,11 @@ export const DIVE_POINTS: DivePoint[] = [
     openAngleWidth: 70,
     reefProtection: 0.65,
     hasOuterReef: true,
-    bottomType: "fine_sand",
+    bottomType: "coral_sand",
     riverImpact: "low",
     reefThresholdCm: 105,
     reefStagnation: 0.85,
-    note: "熱帯魚が多いメインのイノー。アウトリーフまでの複雑なリーフで海水交換が遅く弱めの白濁りが残りやすい。満潮時で南うねりが強い日は水路から流れが入るので注意。"
+    note: "熱帯魚が多いメインのイノー。アウトリーフまでの複雑なリーフで海水交換が遅く、下げ潮や干潮時は白濁りが残りやすいが、上げ潮でリーフを越えて外洋水が入るとクリアになりやすい。満潮時で南うねりが強い日は水路から流れが入るので注意。"
   },
   {
     id: "odo-pool3",

@@ -1,4 +1,5 @@
 import type { DivePoint } from "@/data/points";
+import { getExposureRatio } from "@/lib/swellCalc";
 
 /**
  * 濁り（透明度）予測。
@@ -41,12 +42,16 @@ export const TURBIDITY_META: Record<
 };
 
 /**
- * 直近 lookbackHours 時間（デフォルト12時間）の最大波高/うねり高を取得。
- * リーフ内のタイドプール・イノーでは満潮時や数時間前の波で舞った白濁りが残るため参照する。
+ * 直近 lookbackHours 時間（デフォルト12時間）に、そのポイントへ実際に入ってきたうねりの最大値（m）。
+ * 合成波高（風浪込み）ではなく「うねり高 × 開口方位に対する直撃率」で評価する。
+ * 例: 大度海岸（南向き）に東南東のうねりが斜めに入る日は、波高1.2mでも実際に届くのは0.4m程度。
  */
-export function getRecentMaxWave(
-  hourly: { waveHeight: (number | null)[]; swellHeight: (number | null)[] } | undefined,
+export function getRecentIncidentSwell(
+  hourly:
+    | { swellHeight: (number | null)[]; swellDirection: (number | null)[] }
+    | undefined,
   idx: number,
+  point: DivePoint,
   lookbackHours = 12
 ): number | null {
   if (!hourly) return null;
@@ -54,11 +59,12 @@ export function getRecentMaxWave(
   let found = false;
   const start = Math.max(0, idx - lookbackHours);
   for (let k = start; k <= idx; k++) {
-    const w = Math.max(hourly.waveHeight[k] ?? 0, hourly.swellHeight[k] ?? 0);
-    if (w > 0) {
-      if (w > max) max = w;
-      found = true;
-    }
+    const h = hourly.swellHeight[k];
+    const d = hourly.swellDirection[k];
+    if (h === null || h === undefined) continue;
+    found = true;
+    const incident = d === null || d === undefined ? h : h * getExposureRatio(d, point);
+    if (incident > max) max = incident;
   }
   return found ? max : null;
 }
@@ -66,8 +72,8 @@ export function getRecentMaxWave(
 const OUTER_ISLAND_AREAS: DivePoint["area"][] = ["慶良間", "宮古", "石垣"];
 
 /** 砂の舞いやすい海岸で「クリア」を出す条件 */
-const STRICT_CLEAR_MAX_SCORE = 6; // 通常は20未満でクリア
-const STRICT_CLEAR_MAX_WAVE_M = 0.6; // 直近12時間の最大波高
+const STRICT_CLEAR_MAX_SCORE = 10; // 通常は20未満でクリア
+const STRICT_CLEAR_MAX_WAVE_M = 0.6; // 直近12時間に実際に入ってきたうねりの最大値
 
 /** 「クリア」判定をシビアにするポイントか（明示指定がなければ底質とエリアから決定） */
 export function isClarityStrict(point: DivePoint): boolean {
@@ -82,7 +88,8 @@ export function calculateTurbidity(
   rain24hMm: number | null,
   tideDeltaCm: number | null,
   time: string | undefined,
-  recentWaveM?: number | null,
+  /** 直近12時間に実際に入ってきたうねりの最大値（getRecentIncidentSwell） */
+  recentIncidentSwellM?: number | null,
   tideCm?: number | null
 ): TurbidityEvaluation {
   const reasons: string[] = [];
@@ -98,23 +105,33 @@ export function calculateTurbidity(
       ? Math.min(0.6, (point.reefProtection - 0.45) * 1.4)
       : 0);
 
-  let stagnationPt = 0;
-  const isReefClosedByLowTide =
-    tideCm !== null &&
-    tideCm !== undefined &&
-    point.reefThresholdCm !== undefined &&
-    tideCm < point.reefThresholdCm;
+  const hasTide = tideCm !== null && tideCm !== undefined && point.reefThresholdCm !== undefined;
+  const isReefClosedByLowTide = hasTide && tideCm! < point.reefThresholdCm!;
+  // リーフ越流率（潮位がリーフ天井を越えた量。+40cmで最大）
+  const overtop = hasTide && !isReefClosedByLowTide ? Math.min(1, (tideCm! - point.reefThresholdCm!) / 40) : 0;
+  const isFlooding = tideDeltaCm !== null && tideDeltaCm >= 5;
+  const incident = recentIncidentSwellM ?? 0.6;
 
+  let stagnationPt = 0;
   if (stagnation > 0) {
-    const waveRef = Math.max(recentWaveM ?? 0.6, 0.4);
-    stagnationPt = Math.round(stagnation * (22 + Math.min(24, waveRef * 22)));
+    const waveRef = Math.max(incident, 0.4);
+    stagnationPt = stagnation * (22 + Math.min(24, waveRef * 22));
     if (isReefClosedByLowTide) {
       // 干潮でアウターリーフが露出・閉鎖している間は外洋のきれいな水が入らず白濁りがこもる
-      stagnationPt += Math.round(stagnation * 8);
+      stagnationPt += stagnation * 8;
+    } else if (isFlooding && overtop > 0) {
+      // 上げ潮でリーフを越えて外洋のきれいな水が流れ込んでいる間は、越流量に応じて白濁りが洗い流される
+      stagnationPt *= 1 - 0.85 * overtop;
     }
+    stagnationPt = Math.round(stagnationPt);
     if (stagnationPt >= 18) {
       reasons.push("複雑リーフ内の海水滞留（白濁りがすぐには抜けにくい地形）");
     }
+  }
+  // 満潮でリーフを越えた直撃うねりがリーフ上で砕けて浅いプールの砂を巻き上げる
+  // （揺れの増加分は swellCalc の越波補正で底揺れ→砂の巻き上げに反映済みのため、ここでは理由表示のみ）
+  if (overtop >= 0.5 && incident >= 0.6 && point.hasOuterReef) {
+    reasons.push("満潮でリーフを越えた波による砂の巻き上げ");
   }
 
   // 3. 雨・淡水・排水（最大40点）
@@ -144,9 +161,9 @@ export function calculateTurbidity(
   let score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
 
   // 6. 砂の舞いやすい海岸は「クリア」の条件をシビアにする
-  //    （直近12時間の波が小さく・雨がなく・濁り要因がほぼゼロの日だけクリア。それ以外は「良好」止まり）
+  //    （直近12時間に入ったうねりが小さく・雨がなく・濁り要因が少ない日だけクリア。それ以外は「良好」止まり）
   if (isClarityStrict(point) && score < 20) {
-    const calmSea = (recentWaveM ?? 1) <= STRICT_CLEAR_MAX_WAVE_M;
+    const calmSea = (recentIncidentSwellM ?? 1) <= STRICT_CLEAR_MAX_WAVE_M;
     const noRain = (rain24hMm ?? 0) < 5;
     if (!(score < STRICT_CLEAR_MAX_SCORE && calmSea && noRain)) {
       score = 20;
