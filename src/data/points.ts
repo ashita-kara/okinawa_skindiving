@@ -637,7 +637,7 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "fine_sand",
     riverImpact: "low",
-    note: "冬の北風に圧倒的に強い定番スポット。砂地のため南西うねり時のみ巻き上げで濁る。"
+    note: "冬の北風に圧倒的に強い定番スポット。砂地のため南西うねり時のみ巻き上げで濁る。観光客・体験ダイビングが多く、ビーチ付近の浅場では人が砂を巻き上げる人的な白濁りが海況に関係なく発生しやすい（沖側へ出ると回復しやすい）。"
   },
   {
     id: "anchi-hama",
@@ -653,7 +653,7 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "coral_sand",
     riverImpact: "low",
-    note: "瀬底島・本部半島・北側の浅根群に守られ基本的にうねりを受けにくい。伊江水道の隙間（北北西）からの強いうねりと、海峡の大潮カレントに注意。"
+    note: "瀬底島・本部半島・北側の浅根群に守られ基本的にうねりを受けにくい。伊江水道の隙間（北北西）からの強いうねりと、海峡の大潮カレントに注意。観光客が多く、ビーチ付近の浅場では人が砂を巻き上げる人的な白濁りが海況に関係なく発生しやすい。"
   },
   {
     id: "labyrinth",
