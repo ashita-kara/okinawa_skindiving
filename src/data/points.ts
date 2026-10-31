@@ -225,11 +225,13 @@ export const DIVE_POINTS: DivePoint[] = [
     targetDepth: 4.0,
     openDirection: 270,
     openAngleWidth: 75,
-    reefProtection: 0.35,
-    hasOuterReef: false,
-    bottomType: "coral_sand",
+    reefProtection: 0.45,
+    hasOuterReef: true,
+    bottomType: "fine_sand",
     riverImpact: "low",
-    note: "糸満西海岸の浅いリーフが広がるエリア。東風の日は穏やかだが、西〜北西うねりが入るとリーフの切れ目で流れが出やすい。"
+    reefThresholdCm: 90,
+    reefStagnation: 0.65,
+    note: "糸満西海岸の遠浅リーフと細かい白砂が広がるエリア。東風の日は穏やかだが細砂で微濁りになりやすく、西〜北西うねりが入るとリーフの切れ目で流れが出やすい。"
   },
   {
     id: "komesu",
@@ -521,11 +523,13 @@ export const DIVE_POINTS: DivePoint[] = [
     targetDepth: 4.5,
     openDirection: 315,
     openAngleWidth: 70,
-    reefProtection: 0.45,
-    hasOuterReef: false,
-    bottomType: "coral_sand",
+    reefProtection: 0.50,
+    hasOuterReef: true,
+    bottomType: "fine_sand",
     riverImpact: "low",
-    note: "遠浅のリーフと砂地が広がる恩納村中部のビーチ。南〜東風の日は穏やかだが、北西うねりが強い日は沖のリーフ切れ目の流れに注意。"
+    reefThresholdCm: 90,
+    reefStagnation: 0.65,
+    note: "遠浅のリーフと細かい白砂が広がる恩納村中部のビーチ。南〜東風の日は穏やかだが細砂で微濁りになりやすく、北西うねりが強い日は沖のリーフ切れ目の流れに注意。"
   },
   {
     id: "apogama",
@@ -587,11 +591,13 @@ export const DIVE_POINTS: DivePoint[] = [
     targetDepth: 4.5,
     openDirection: 320,
     openAngleWidth: 65,
-    reefProtection: 0.45,
-    hasOuterReef: false,
-    bottomType: "coral_sand",
+    reefProtection: 0.50,
+    hasOuterReef: true,
+    bottomType: "fine_sand",
     riverImpact: "low",
-    note: "沖のリーフパッチに魚影が濃い。北西のうねりが強い日は流れと揺れに注意。"
+    reefThresholdCm: 90,
+    reefStagnation: 0.70,
+    note: "なかゆくい北隣の遠浅イノー。沖のリーフパッチに魚影が濃いが、細かい白砂が舞いやすく『白濁り気味の良好〜白濁り』になりやすい。北西うねりが強い日は流れと揺れに注意。"
   },
 
   // ================= 名護・本部・今帰仁 =================
