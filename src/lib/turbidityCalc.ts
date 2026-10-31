@@ -137,8 +137,14 @@ export function calculateTurbidity(
   }
 
   // 3. 雨・淡水・排水（最大40点）
-  const rain = Math.min(40, (rain24hMm ?? 0) * RIVER_COEF[point.riverImpact] * 2);
-  if (rain >= 15) reasons.push("雨による淡水・排水流入（モヤ・赤土）");
+  //    riverImpact === "high"（河口・湧水隣接ポイント）は雨が降っていない日も常時淡水・シルト流入のベース影響がある
+  const riverBase = point.riverImpact === "high" ? 12 : 0;
+  const rain = Math.min(40, riverBase + (rain24hMm ?? 0) * RIVER_COEF[point.riverImpact] * 2);
+  if ((rain24hMm ?? 0) * RIVER_COEF[point.riverImpact] * 2 >= 15) {
+    reasons.push("雨による淡水・排水流入（モヤ・赤土）");
+  } else if (riverBase > 0) {
+    reasons.push("近隣の河川・湧水からの淡水・シルト流入");
+  }
 
   // 4. 潮の動き（岩礁ポイントは浅場の水の出入りの影響が小さいため対象外）
   let tidePt = 0;

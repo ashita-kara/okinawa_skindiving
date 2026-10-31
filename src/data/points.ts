@@ -273,11 +273,13 @@ export const DIVE_POINTS: DivePoint[] = [
     targetDepth: 3.5,
     openDirection: 150,
     openAngleWidth: 70,
-    reefProtection: 0.45,
-    hasOuterReef: false,
-    bottomType: "coral_sand",
-    riverImpact: "low",
-    note: "八重瀬町の南東向き天然ビーチ。奇岩と遠浅のイノーが広がり北風に強いが、南〜東うねりが入る日や下げ潮時のリーフ切れ目の流れに注意。"
+    reefProtection: 0.55,
+    hasOuterReef: true,
+    bottomType: "fine_sand",
+    riverImpact: "high",
+    reefThresholdCm: 95,
+    reefStagnation: 0.65,
+    note: "八重瀬町の南東向き天然ビーチ。すぐ近くに川（白水川・雄樋川）の河口や湧水があり、遠浅イノー内に細かい砂・シルトが溜まりやすいため、晴天時でもモヤや濁りが出やすい。下げ潮時のリーフ切れ目の流れにも注意。"
   },
   {
     id: "chinen-misaki",
