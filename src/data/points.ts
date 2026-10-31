@@ -483,11 +483,11 @@ export const DIVE_POINTS: DivePoint[] = [
   },
   {
     id: "ura-maeda",
-    name: "裏真栄田クレバス",
-    yomi: "うらまえだくればす",
+    name: "裏真栄田アウトリーフ",
+    yomi: "うらまえだあうとりーふ",
     area: "恩納村",
-    lat: 26.445939,
-    lon: 127.769508,
+    lat: 26.446284,
+    lon: 127.768011,
     targetDepth: 5.0,
     openDirection: 300,
     openAngleWidth: 75,
@@ -495,7 +495,7 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "真栄田岬の北西側（裏真栄田）にあるクレバス地形ポイント。北東風は岬の陰でかわしやすいが、西〜北西うねりが入ると水路内で底揺れ（サージ）が強まる。"
+    note: "真栄田岬の北西側（裏真栄田）のアウトリーフ。北東風は岬の陰でかわしやすいが、西〜北西うねりが入るとリーフエッジや水路周辺で底揺れ（サージ）や流れが強まる。"
   },
   {
     id: "yamada",
