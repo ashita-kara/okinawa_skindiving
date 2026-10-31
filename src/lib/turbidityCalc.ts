@@ -121,7 +121,9 @@ export function calculateTurbidity(
       stagnationPt += stagnation * 8;
     } else if (isFlooding && overtop > 0) {
       // 上げ潮でリーフを越えて外洋のきれいな水が流れ込んでいる間は、越流量に応じて白濁りが洗い流される
-      stagnationPt *= 1 - 0.85 * overtop;
+      // ただし底質が微細砂（fine_sand）の場所は流入時にも細砂がわずかに舞うため回復が緩やか
+      const flushRate = point.bottomType === "fine_sand" ? 0.55 : 0.85;
+      stagnationPt *= 1 - flushRate * overtop;
     }
     stagnationPt = Math.round(stagnationPt);
     if (stagnationPt >= 18) {
@@ -161,13 +163,19 @@ export function calculateTurbidity(
   let score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
 
   // 6. 砂の舞いやすい海岸は「クリア」の条件をシビアにする
-  //    （直近12時間に入ったうねりが小さく・雨がなく・濁り要因が少ない日だけクリア。それ以外は「良好」止まり）
+  //    - 微細砂・シルト（fine_sand）の本島ポイントは、わずかな潮の動きでも白っぽく霞むため最高でも「良好（浅場のみ微濁り）」まで
+  //    - サンゴ砂（coral_sand）や砂地隣接アウトリーフは、直近12時間に入ったうねりが小さく・雨がなく・濁り要因が少ない日だけクリア
   if (isClarityStrict(point) && score < 20) {
-    const calmSea = (recentIncidentSwellM ?? 1) <= STRICT_CLEAR_MAX_WAVE_M;
-    const noRain = (rain24hMm ?? 0) < 5;
-    if (!(score < STRICT_CLEAR_MAX_SCORE && calmSea && noRain)) {
+    if (point.bottomType === "fine_sand") {
       score = 20;
-      reasons.push("砂の舞いやすい海岸のため、ベタ凪が続いた日以外はクリアまで届きにくい");
+      reasons.push("粒子が細かい白砂・シルトの海底のため、穏やかでも微細な白濁りが残りやすい");
+    } else {
+      const calmSea = (recentIncidentSwellM ?? 1) <= STRICT_CLEAR_MAX_WAVE_M;
+      const noRain = (rain24hMm ?? 0) < 5;
+      if (!(score < STRICT_CLEAR_MAX_SCORE && calmSea && noRain)) {
+        score = 20;
+        reasons.push("砂の舞いやすい海岸のため、ベタ凪が続いた日以外はクリアまで届きにくい");
+      }
     }
   }
 

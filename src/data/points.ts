@@ -567,11 +567,13 @@ export const DIVE_POINTS: DivePoint[] = [
     targetDepth: 4.0,
     openDirection: 330,
     openAngleWidth: 75,
-    reefProtection: 0.50,
-    hasOuterReef: false,
-    bottomType: "coral_sand",
+    reefProtection: 0.55,
+    hasOuterReef: true,
+    bottomType: "fine_sand",
     riverImpact: "low",
-    note: "旧ダイヤモンドビーチ／アカティーダバンタ一帯（同一予報メッシュのため統合）。砂地とサンゴが美しいが、北西〜北東うねりに注意。"
+    reefThresholdCm: 95,
+    reefStagnation: 0.75,
+    note: "旧ダイヤモンドビーチ／アカティーダバンタ一帯（同一予報メッシュのため統合）。沖のリーフまで遠浅のイノーが広がり、粒子が非常に細かい白砂（シルト）が舞いやすいため、穏やかな日でも『白濁り気味の良好〜白濁り』になりやすい。"
   },
   {
     id: "kibogaoka",
