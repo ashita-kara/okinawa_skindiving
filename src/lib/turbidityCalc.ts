@@ -127,7 +127,11 @@ export function calculateTurbidity(
     }
     stagnationPt = Math.round(stagnationPt);
     if (stagnationPt >= 18) {
-      reasons.push("複雑リーフ内の海水滞留（白濁りがすぐには抜けにくい地形）");
+      reasons.push(
+        point.hasOuterReef
+          ? "複雑リーフ内の海水滞留（白濁りがすぐには抜けにくい地形）"
+          : "遠浅の微細砂エリアのため微細な白濁りが残りやすい"
+      );
     }
   }
   // 満潮でリーフを越えた直撃うねりがリーフ上で砕けて浅いプールの砂を巻き上げる
