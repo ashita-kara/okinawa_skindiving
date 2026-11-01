@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { X, ArrowDown, MapPin, Shield, Compass, Info, AlertTriangle, Anchor } from "lucide-react";
+import { X, ArrowDown, MapPin, Shield, Compass, Info, AlertTriangle, Anchor, Map as MapIcon, LayoutGrid } from "lucide-react";
 import type { DivePoint } from "@/data/points";
 import {
   calculateUnderwaterSurge,
@@ -43,11 +43,23 @@ interface Props {
   hourly?: PointHourly;
   tide: TideData;
   hourIdx: number;
+  currentView: "list" | "map" | "tide";
   onSelectHour: (i: number) => void;
+  onTitleClick: (p: DivePoint) => void;
   onClose: () => void;
 }
 
-export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelectHour, onClose }: Props) {
+export default function SpotDrawer({
+  point,
+  open,
+  hourly,
+  tide,
+  hourIdx,
+  currentView,
+  onSelectHour,
+  onTitleClick,
+  onClose,
+}: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Escキーで閉じる
@@ -168,10 +180,38 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
                 <X className="h-4 w-4 md:h-5 md:w-5" />
               </button>
               <div className="flex flex-wrap items-center gap-1.5 pr-10 md:gap-2 md:pr-12">
-                <h2 className="text-sm font-bold text-slate-800 md:text-xl">{point.name}</h2>
-                {point.subName && (
-                  <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 md:px-2 md:text-xs">{point.subName}</span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onTitleClick(point)}
+                  className="group -ml-1.5 inline-flex flex-wrap items-center gap-1.5 rounded-xl px-1.5 py-0.5 text-left transition hover:bg-sky-50 active:scale-[0.99]"
+                  title={
+                    currentView === "list"
+                      ? "タップしてマップでこのポイントを拡大表示"
+                      : "タップしてリストでこのポイントを表示"
+                  }
+                >
+                  <h2 className="text-sm font-bold text-slate-800 underline decoration-sky-300 decoration-dashed underline-offset-4 group-hover:text-sky-700 md:text-xl">
+                    {point.name}
+                  </h2>
+                  {point.subName && (
+                    <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 md:px-2 md:text-xs">
+                      {point.subName}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 ring-1 ring-sky-200 transition group-hover:bg-sky-100 md:text-xs">
+                    {currentView === "list" ? (
+                      <>
+                        <MapIcon className="h-3 w-3" />
+                        マップへ
+                      </>
+                    ) : (
+                      <>
+                        <LayoutGrid className="h-3 w-3" />
+                        リストへ
+                      </>
+                    )}
+                  </span>
+                </button>
                 {current && (
                   <span
                     className={`flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 md:px-2 md:text-xs ${TURBIDITY_META[current.tb.status].badge}`}

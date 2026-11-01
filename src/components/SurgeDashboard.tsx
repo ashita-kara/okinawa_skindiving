@@ -111,12 +111,50 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<DivePoint | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mapFocus, setMapFocus] = useState<{ p: DivePoint; seq: number } | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const openDrawer = useCallback((p: DivePoint) => {
     setSelectedPoint(p);
     setDrawerOpen(true);
   }, []);
   // 閉じるアニメーション中も内容を保持するため selectedPoint は残す
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  // 詳細ドロワー左上のポイント名タップ時:
+  // - リスト表示中 → マップに切り替えて該当ポイントを拡大表示
+  // - マップ / 潮汐表示中 → リストに切り替えて該当ポイントのカードへスクロール
+  const handleDrawerTitleClick = useCallback(
+    (p: DivePoint) => {
+      setDrawerOpen(false);
+      const inCurrentTab =
+        tab === "すべて" ||
+        tab === p.area ||
+        (tab === "お気に入り" && favorites.includes(p.id));
+      if (!inCurrentTab) {
+        setTab(p.area);
+      }
+      if (view === "list") {
+        setSelectedPoint(p);
+        setMapFocus((prev) => ({ p, seq: (prev?.seq ?? 0) + 1 }));
+        setView("map");
+      } else {
+        setSelectedPoint(p);
+        setHighlightedId(p.id);
+        setView("list");
+      }
+    },
+    [tab, favorites, view]
+  );
+
+  // マップ/潮汐 → リスト切替時に該当ポイントのカード位置へスムーズスクロール
+  useEffect(() => {
+    if (view !== "list" || !highlightedId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`card-${highlightedId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [view, highlightedId]);
 
   const times = useMemo(() => Object.values(data.byPointId)[0]?.time ?? [], [data]);
 
@@ -415,7 +453,8 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         ) : view === "map" ? (
           <SurgeMap
             items={rows}
-            selectedId={drawerOpen ? selectedPoint?.id : undefined}
+            selectedId={drawerOpen ? selectedPoint?.id : mapFocus?.p.id}
+            focusTarget={mapFocus}
             onSelect={openDrawer}
           />
         ) : (
@@ -434,7 +473,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
                   aria-label={`${p.name}${p.subName ? ` ${p.subName}` : ""}の時間別目安を開く`}
                   onClick={() => openDrawer(p)}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openDrawer(p))}
-                  className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border bg-white p-5 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-2xl focus-visible:outline-2 focus-visible:outline-sky-500 ${drawerOpen && selectedPoint?.id === p.id ? "border-sky-400 ring-2 ring-sky-300" : "border-sky-100"} ${st.glow}`}
+                  className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl border bg-white p-5 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-2xl focus-visible:outline-2 focus-visible:outline-sky-500 ${(drawerOpen && selectedPoint?.id === p.id) || highlightedId === p.id ? "border-sky-400 ring-2 ring-sky-300" : "border-sky-100"} ${st.glow}`}
                 >
                   <div className={`absolute inset-x-0 top-0 h-1 ${st.bar}`} />
                   <div className="flex items-start justify-between gap-2">
@@ -573,7 +612,9 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         hourly={selectedPoint ? data.byPointId[selectedPoint.id] : undefined}
         tide={tide}
         hourIdx={hourIdx}
+        currentView={view}
         onSelectHour={setHourIdx}
+        onTitleClick={handleDrawerTitleClick}
         onClose={closeDrawer}
       />
     </div>

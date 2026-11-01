@@ -6,7 +6,7 @@
  */
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { DivePoint } from "@/data/points";
 import type { SwellEvaluation } from "@/lib/swellCalc";
@@ -39,26 +39,50 @@ function pinIcon(item: MapItem, selected: boolean) {
   });
 }
 
-function FitBounds({ positions }: { positions: [number, number][] }) {
+export interface MapFocusTarget {
+  p: DivePoint;
+  seq: number;
+}
+
+function MapCamera({
+  positions,
+  focusTarget,
+}: {
+  positions: [number, number][];
+  focusTarget?: MapFocusTarget | null;
+}) {
   const map = useMap();
   const key = positions.map((p) => p.join(",")).join("|");
+  const lastFocusSeq = useRef<number | null>(null);
+
   useEffect(() => {
+    if (focusTarget && focusTarget.seq !== lastFocusSeq.current) {
+      lastFocusSeq.current = focusTarget.seq;
+      map.setView([focusTarget.p.lat, focusTarget.p.lon], 15, { animate: true });
+      const id = setTimeout(() => {
+        map.invalidateSize();
+        map.setView([focusTarget.p.lat, focusTarget.p.lon], 15, { animate: false });
+      }, 60);
+      return () => clearTimeout(id);
+    }
     if (positions.length === 0) return;
     map.fitBounds(L.latLngBounds(positions), { padding: [36, 36], maxZoom: 12 });
     const id = setTimeout(() => map.invalidateSize(), 50);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, key]);
+  }, [map, key, focusTarget]);
   return null;
 }
 
 export default function SurgeMap({
   items,
   selectedId,
+  focusTarget,
   onSelect,
 }: {
   items: MapItem[];
   selectedId?: string;
+  focusTarget?: MapFocusTarget | null;
   onSelect: (p: DivePoint) => void;
 }) {
   const posList = useMemo(
@@ -81,7 +105,7 @@ export default function SurgeMap({
           minZoom={5}
           maxZoom={18}
         />
-        <FitBounds positions={posList} />
+        <MapCamera positions={posList} focusTarget={focusTarget} />
         {items.map((it) => (
           <Marker
             key={it.p.id}
