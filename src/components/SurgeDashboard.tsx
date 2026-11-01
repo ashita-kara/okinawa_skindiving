@@ -181,7 +181,8 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         const rain24h = h?.past24hRainMm[hourIdx] ?? null;
         const recentWave = getRecentIncidentSwell(h, hourIdx, p, 12);
         const ev = calculateUnderwaterSurge(sh, sp, sd, p, tideInput);
-        const tb = calculateTurbidity(p, ev.bottomSurgeCm, rain24h, tideInput.deltaCm, currentTime, recentWave, tideInput.tideCm);
+        const rawWave = Math.max(wh ?? 0, sh ?? 0) || null;
+        const tb = calculateTurbidity(p, ev.bottomSurgeCm, rain24h, tideInput.deltaCm, currentTime, recentWave, tideInput.tideCm, rawWave, sd);
         return { p, sh, sp, sd, wh, ev, tb, hasData: !!h };
       }),
     [data, visiblePoints, hourIdx, tideInput, currentTime]

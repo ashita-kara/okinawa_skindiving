@@ -128,7 +128,7 @@ export const DIVE_POINTS: DivePoint[] = [
     bottomType: "rock",
     riverImpact: "none",
     clarityStrict: true,
-    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。岸側の砂地イノーの水が流れ出るため、ベタ凪が続いた日以外は真栄田岬などの岩礁ポイントほどの透明度にはなりにくい。"
+    note: "【上級者向け】外洋のうねりが直撃するドロップオフ。ウミガメ遭遇率は高いがカレントと底揺れに厳重注意。岸側の砂地イノーからの流出や、東〜南東うねりによる沿岸流（ぐしちゃん浜方面からの濁り流入）で強く濁ることがある。"
   },
   {
     id: "oujima-in",
@@ -181,7 +181,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "喜屋武岬西側の断崖下に広がるダイナミックな地形ポイント。北〜北東風には強いが、南〜西うねりが入ると岩場のエントリー・エキジットが危険になる。"
+    clarityStrict: true,
+    note: "喜屋武岬西側の断崖下に広がるダイナミックな地形ポイント。北〜北東風には強いが、南〜西うねりが入ると岩場のエントリー・エキジットが危険になり、北側の名城方面から沿岸の砂濁りが回り込みやすい。"
   },
   {
     id: "giza-banta",
@@ -196,8 +197,9 @@ export const DIVE_POINTS: DivePoint[] = [
     reefProtection: 0.20,
     hasOuterReef: false,
     bottomType: "rock",
-    riverImpact: "none",
-    note: "南東向きに開けた絶壁下の海域。北風には滅法強いが、太平洋からの南〜東うねりが入る日は底揺れとリーフ際の引き波が強まる。"
+    riverImpact: "low",
+    clarityStrict: true,
+    note: "南東向きに開けた絶壁下の海域。北風には滅法強いが、太平洋からの東〜南うねりが入る日は底揺れとリーフ際の引き波が強まり、東隣のぐしちゃん浜（白水川河口）方面から沿岸流で濁りが運ばれやすい。"
   },
   {
     id: "kyan-misaki",
@@ -262,7 +264,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "米須海岸西側の南向きリーフエッジ海域。北風には強いが、外洋の南うねりがダイレクトに入りやすく、リーフ切れ目の強い離岸流（カレント）と波に注意。"
+    clarityStrict: true,
+    note: "米須海岸西側の南向きリーフエッジ海域。北風には強いが、外洋の南〜東うねりが入るとリーフ切れ目の強い離岸流（カレント）や、インリーフ・周辺海岸からの濁り流出が発生しやすい。"
   },
   {
     id: "gushichan-hama",
@@ -459,7 +462,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "low",
-    note: "読谷西海岸の地形ポイント。東風の日は穏やかだが、西〜北西うねりの影響を受けやすく岩場のエントリーに注意。"
+    clarityStrict: true,
+    note: "読谷西海岸の地形ポイント。東風の日は穏やかだが、西〜北西うねりや横方向の波が入ると沿岸の砂濁りやエントリーの波に注意。"
   },
 
   // ================= 恩納村 =================
@@ -493,7 +497,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "真栄田岬の北西側（裏真栄田）のアウトリーフ。北東風は岬の陰でかわしやすいが、西〜北西うねりが入るとリーフエッジや水路周辺で底揺れ（サージ）や流れが強まる。"
+    clarityStrict: true,
+    note: "真栄田岬の北西側（裏真栄田）のアウトリーフ。北東風は岬の陰でかわしやすいが、西〜北西うねりや横方向の波が入るとリーフエッジや水路周辺で底揺れ・インリーフからの砂濁り流出が強まる。"
   },
   {
     id: "yamada",
@@ -1259,7 +1264,8 @@ export const DIVE_POINTS: DivePoint[] = [
     hasOuterReef: false,
     bottomType: "rock",
     riverImpact: "none",
-    note: "遊歩道橋の外側に広がる南向きドロップオフ・サンゴ域。北風の日は穏やかで透明度抜群だが、南うねりと入り江出口の引き潮カレントに注意。"
+    clarityStrict: true,
+    note: "遊歩道橋の外側に広がる南向きドロップオフ・サンゴ域。北風の日は穏やかで透明度抜群だが、南〜東うねりや引き潮時は入り江からの濁り流出とカレントに注意。"
   },
   {
     id: "aragusuku",

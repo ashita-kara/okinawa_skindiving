@@ -72,14 +72,16 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
         const recentWave = getRecentIncidentSwell(hourly, i, point, 12);
         const tideIn = getTideInput(tide, t);
         const ev = calculateUnderwaterSurge(sh, sp, sd, point, tideIn);
-        const tb = calculateTurbidity(point, ev.bottomSurgeCm, rain24h, tideIn.deltaCm, t, recentWave, tideIn.tideCm);
+        const wh = hourly.waveHeight[i] ?? null;
+        const rawWave = Math.max(wh ?? 0, sh ?? 0) || null;
+        const tb = calculateTurbidity(point, ev.bottomSurgeCm, rain24h, tideIn.deltaCm, t, recentWave, tideIn.tideCm, rawWave, sd);
         return {
           t,
           i,
           sh,
           sp,
           sd,
-          wh: hourly.waveHeight[i] ?? null,
+          wh,
           ws: hourly.windSpeed[i] ?? null,
           wg: hourly.windGusts[i] ?? null,
           wd: hourly.windDirection[i] ?? null,
@@ -100,10 +102,13 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
     if (!point || !hourly) return null;
     const t = hourly.time[hourIdx];
     const tideIn = getTideInput(tide, t);
+    const sh = hourly.swellHeight[hourIdx] ?? null;
+    const sd = hourly.swellDirection[hourIdx] ?? null;
+    const wh = hourly.waveHeight[hourIdx] ?? null;
     const ev = calculateUnderwaterSurge(
-      hourly.swellHeight[hourIdx] ?? null,
+      sh,
       hourly.swellPeriod[hourIdx] ?? null,
-      hourly.swellDirection[hourIdx] ?? null,
+      sd,
       point,
       tideIn
     );
@@ -114,7 +119,9 @@ export default function SpotDrawer({ point, open, hourly, tide, hourIdx, onSelec
       tideIn.deltaCm,
       t,
       getRecentIncidentSwell(hourly, hourIdx, point, 12),
-      tideIn.tideCm
+      tideIn.tideCm,
+      Math.max(wh ?? 0, sh ?? 0) || null,
+      sd
     );
     return { ev, tb };
   }, [point, hourly, tide, hourIdx]);

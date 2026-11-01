@@ -1,5 +1,5 @@
 import type { DivePoint } from "@/data/points";
-import { getExposureRatio } from "@/lib/swellCalc";
+import { getAngleDiff, getExposureRatio } from "@/lib/swellCalc";
 
 /**
  * 濁り（透明度）予測。
@@ -90,13 +90,38 @@ export function calculateTurbidity(
   time: string | undefined,
   /** 直近12時間に実際に入ってきたうねりの最大値（getRecentIncidentSwell） */
   recentIncidentSwellM?: number | null,
-  tideCm?: number | null
+  tideCm?: number | null,
+  /** 外洋の合成波高またはうねり高（m）— 沿岸流による濁り移流判定に使用 */
+  rawWaveM?: number | null,
+  /** うねりの到来方角（度）— 斜め入射による沿岸流判定に使用 */
+  swellDir?: number | null
 ): TurbidityEvaluation {
   const reasons: string[] = [];
 
   // 1. 砂の巻き上げ（最大60点）
-  const sand = Math.min(60, bottomSurgeCm * BOTTOM_COEF[point.bottomType]);
-  if (sand >= 25) reasons.push("底揺れによる砂の巻き上げ");
+  //    底質が rock でも砂地イノー・砂浜に隣接するアウトリーフ（clarityStrict: true）は水路・クレバスの砂が舞うため係数 0.85
+  const bottomCoef =
+    point.bottomType === "rock" && point.clarityStrict ? 0.85 : BOTTOM_COEF[point.bottomType];
+  const sand = Math.min(60, bottomSurgeCm * bottomCoef);
+  if (sand >= 20) reasons.push("底揺れによる砂の巻き上げ");
+
+  // 2. 横方向の強い波・うねりによる「沿岸流の濁り移流」（最大45点）
+  //    砂地・イノー・河口が連なる海岸線の外洋側ポイント（isClarityStrict かつ インリーフ遮蔽なし）で、
+  //    開口方位に対して斜め横（25°〜105°）から波・うねりが入ると、海岸沿いの濁り水が運ばれて視界が落ちる
+  let longshorePt = 0;
+  if (isClarityStrict(point) && !point.hasOuterReef && swellDir !== null && swellDir !== undefined) {
+    const angleDiff = getAngleDiff(swellDir, point.openDirection);
+    const rawW = Math.max(rawWaveM ?? 0, recentIncidentSwellM ?? 0);
+    if (angleDiff >= 25 && angleDiff <= 105 && rawW >= 0.85 && bottomSurgeCm >= 12) {
+      const obliqueFactor = Math.sin(((Math.min(angleDiff, 85) - 15) / 70) * (Math.PI / 2));
+      const waveFactor = Math.max(0, rawW - 0.62);
+      const surgeFactor = Math.min(1.6, bottomSurgeCm / 14);
+      longshorePt = Math.round(Math.min(48, obliqueFactor * waveFactor * 60 * surgeFactor));
+      if (longshorePt >= 15) {
+        reasons.push("横方向のうねり（沿岸流）による周辺海岸からの濁り流入");
+      }
+    }
+  }
 
   // 2. 複雑リーフ・イノー内の海水滞留（白濁りの抜けにくさ）
   const stagnation =
@@ -150,13 +175,13 @@ export function calculateTurbidity(
     reasons.push("近隣の河川・湧水からの淡水・シルト流入");
   }
 
-  // 4. 潮の動き（岩礁ポイントは浅場の水の出入りの影響が小さいため対象外）
+  // 4. 潮の動き（純粋な岩礁ポイントは対象外だが、砂地イノー隣接のアウトリーフは下げ潮時にイノーの濁りが流出する）
   let tidePt = 0;
-  if (tideDeltaCm !== null && point.bottomType !== "rock") {
+  if (tideDeltaCm !== null && (point.bottomType !== "rock" || isClarityStrict(point))) {
     if (tideDeltaCm <= -10) {
       tidePt = 15;
-      reasons.push("下げ潮によるインリーフ水の流出");
-    } else if (tideDeltaCm >= 10 && !isReefClosedByLowTide) {
+      reasons.push("下げ潮によるインリーフ・沿岸水の流出");
+    } else if (tideDeltaCm >= 10 && !isReefClosedByLowTide && point.bottomType !== "rock") {
       // 上げ潮による外洋水流入でクリアになるのは、潮位がアウターリーフを超えている時のみ
       tidePt = -10;
     }
@@ -170,7 +195,7 @@ export function calculateTurbidity(
     reasons.push("春濁りシーズン（プランクトン傾向）");
   }
 
-  let score = Math.max(0, Math.round(sand + stagnationPt + rain + tidePt + season));
+  let score = Math.max(0, Math.round(sand + longshorePt + stagnationPt + rain + tidePt + season));
 
   // 6. 砂の舞いやすい海岸は「クリア」の条件をシビアにする
   //    - 微細砂・シルト（fine_sand）の本島ポイントは、わずかな潮の動きでも白っぽく霞むため最高でも「良好（浅場のみ微濁り）」まで
