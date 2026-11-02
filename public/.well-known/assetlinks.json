@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.prototoolslab.okinawadive",
       "sha256_cert_fingerprints": [
-        "AD:90:57:9D:E1:96:99:B4:BE:67:0E:28:DD:B5:8D:76:93:6A:BD:05:59:77:23:27:9C:32:6D:FC:87:03:17:84"
+        "AD:90:57:9D:E1:96:99:B4:BE:67:0E:28:DD:B5:8D:76:93:6A:BD:05:59:77:23:27:9C:32:6D:FC:87:03:17:84",
+        "FC:3F:55:8F:B3:4B:F7:2C:38:A5:A5:48:3E:26:4F:D0:21:9F:C7:FE:5E:ED:FD:2F:84:6D:98:15:05:DF:DC:12"
       ]
     }
   }
