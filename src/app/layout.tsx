@@ -34,6 +34,9 @@ export const metadata: Metadata = {
     description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
     images: ["/icon.png"],
   },
+  verification: {
+    google: "cEVBGWXBmtNi1BJmGnmvYQ_d4aS8_wN4A4K5UNBlvxA",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
