@@ -2,15 +2,19 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: "沖縄スキンダイビング 底揺れ・海況ナビ",
     short_name: "沖縄海況ナビ",
     description:
       "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ指数・透明度目安・潮汐・息止めトレーニングを備えたスキンダイバー向け海況ナビ",
     start_url: "/",
+    scope: "/",
     display: "standalone",
+    orientation: "portrait",
     background_color: "#f0f9ff",
     theme_color: "#0284c7",
     lang: "ja",
+    categories: ["weather", "sports", "navigation"],
     icons: [
       {
         src: "/icon-192.png",
