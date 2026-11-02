@@ -13,16 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://okinawa-dive-surge.vercel.app"),
+  metadataBase: new URL("https://okinawa-dive.prototoolslab.com"),
   title: "沖縄スキンダイビング 底揺れ・海況ナビ",
   description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
   alternates: {
-    canonical: "https://okinawa-dive-surge.vercel.app/",
+    canonical: "https://okinawa-dive.prototoolslab.com/",
   },
   openGraph: {
     title: "沖縄スキンダイビング 底揺れ・海況ナビ",
     description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
-    url: "https://okinawa-dive-surge.vercel.app/",
+    url: "https://okinawa-dive.prototoolslab.com/",
     siteName: "沖縄スキンダイビング 底揺れ・海況ナビ",
     images: ["/icon.png"],
     locale: "ja_JP",

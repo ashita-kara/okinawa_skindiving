@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "next/link";
 import SpotDrawer from "@/components/SpotDrawer";
 import TidePanel from "@/components/TidePanel";
 import ApneaTrainer from "@/components/ApneaTrainer";
@@ -602,7 +603,13 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
         <footer className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
           Data: Open-Meteo Marine / Forecast API（1時間キャッシュ）・潮位: 気象庁 潮位表（那覇）<br />
-          ※本サービスは気象業務法に基づく独自の気象・波浪予報業務を行うものではありません。公開数値データと各ポイントの地形条件（水深・開口方位）から算出した参考指数・目安を表示するナビゲーションツールです。離岸流・底揺れ・透明度の表示は安全を保証するものではないため、必ず現地の状況を確認してください。
+          ※本サービスは気象業務法に基づく独自の気象・波浪予報業務を行うものではありません。公開数値データと各ポイントの地形条件（水深・開口方位）から算出した参考指数・目安を表示するナビゲーションツールです。離岸流・底揺れ・透明度の表示は安全を保証するものではないため、必ず現地の状況を確認してください。<br />
+          <span className="mt-2 inline-block">
+            © Proto Tools Lab ・{" "}
+            <Link href="/privacy" className="underline hover:text-sky-700">
+              プライバシーポリシー・免責事項
+            </Link>
+          </span>
         </footer>
       </main>
 
