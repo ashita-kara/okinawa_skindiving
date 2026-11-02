@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.prototoolslab.okinawadive",
+      "sha256_cert_fingerprints": [
+        "AD:90:57:9D:E1:96:99:B4:BE:67:0E:28:DD:B5:8D:76:93:6A:BD:05:59:77:23:27:9C:32:6D:FC:87:03:17:84"
+      ]
+    }
+  }
+]
