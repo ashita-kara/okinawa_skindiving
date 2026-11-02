@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://okinawa-dive.prototoolslab.com/",
   },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     title: "沖縄スキンダイビング 底揺れ・海況ナビ",
     description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
