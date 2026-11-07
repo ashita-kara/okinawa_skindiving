@@ -6,10 +6,9 @@ import Image from "next/image";
 import SpotDrawer from "@/components/SpotDrawer";
 import TidePanel from "@/components/TidePanel";
 import ApneaTrainer from "@/components/ApneaTrainer";
-import GuideSection from "@/components/GuideSection";
 import {
   Waves, Clock, Anchor, MapPin, Info, AlertTriangle, Heart, ChevronUp, ChevronDown,
-  LayoutGrid, Map as MapIcon, Moon, Timer, BookOpen, ArrowLeft,
+  LayoutGrid, Map as MapIcon, Moon, Timer, ArrowLeft,
 } from "lucide-react";
 import { DIVE_POINTS, type AreaCategory, type DivePoint } from "@/data/points";
 import { calculateUnderwaterSurge, getAngleDiff, type SwellEvaluation } from "@/lib/swellCalc";
@@ -29,7 +28,7 @@ const SurgeMap = dynamic(() => import("@/components/SurgeMap"), {
 
 type Tab = "すべて" | "お気に入り" | AreaCategory;
 type View = "list" | "map" | "tide";
-type SubPage = "none" | "training" | "guide";
+type SubPage = "none" | "training";
 
 const TABS: Tab[] = ["すべて", "お気に入り", "南部", "中部", "恩納村", "名護・本部", "国頭・北部", "慶良間", "宮古", "石垣"];
 const FAV_KEY = "okinawa-skindiving:favorites:v1";
@@ -271,18 +270,6 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
                 <Timer className="h-3.5 w-3.5" />
                 息止めトレーニング
               </button>
-              <button
-                type="button"
-                onClick={() => setSubPage((p) => (p === "guide" ? "none" : "guide"))}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold ring-1 transition ${
-                  subPage === "guide"
-                    ? "bg-teal-600 text-white ring-teal-600 shadow-xs"
-                    : "bg-white/90 text-teal-800 ring-teal-200 hover:bg-teal-50"
-                }`}
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                海と体調の知識（読本）
-              </button>
             </div>
           </div>
         </div>
@@ -300,28 +287,6 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
               <ArrowLeft className="h-4 w-4" />
               シミュレーターに戻る
             </button>
-            <div className="inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setSubPage("training")}
-                className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
-                  subPage === "training" ? "bg-white font-bold text-sky-700 shadow-xs" : "text-slate-600 hover:text-sky-700"
-                }`}
-              >
-                <Timer className="h-3.5 w-3.5" />
-                息止めトレ
-              </button>
-              <button
-                type="button"
-                onClick={() => setSubPage("guide")}
-                className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${
-                  subPage === "guide" ? "bg-white font-bold text-teal-700 shadow-xs" : "text-slate-600 hover:text-teal-700"
-                }`}
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                海と体調の知識
-              </button>
-            </div>
           </div>
         ) : (
         <div className="mx-auto max-w-6xl space-y-3 px-5 py-3 sm:px-10 md:space-y-4 md:py-4">
@@ -427,8 +392,6 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-10">
         {subPage === "training" ? (
           <ApneaTrainer />
-        ) : subPage === "guide" ? (
-          <GuideSection />
         ) : (
           <>
         {data.error && (
