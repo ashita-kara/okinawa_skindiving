@@ -13,11 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://okinawa-dive.prototoolslab.com"),
-  title: "沖縄スキンダイビング 底揺れ・海況ナビ",
-  description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
-  alternates: {
-    canonical: "https://okinawa-dive.prototoolslab.com/",
+  title: "水粒子軌道 計算シミュレーター",
+  description: "微小振幅波理論（Airy波理論）および地点別地形パラメータに基づく水粒子軌道振幅・懸濁指数演算シミュレーター",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
   },
   icons: {
     icon: [
@@ -25,31 +30,6 @@ export const metadata: Metadata = {
       { url: "/store-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-  },
-  openGraph: {
-    title: "沖縄スキンダイビング 底揺れ・海況ナビ",
-    description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
-    url: "https://okinawa-dive.prototoolslab.com/",
-    siteName: "沖縄スキンダイビング 底揺れ・海況ナビ",
-    images: [
-      {
-        url: "/feature-graphic-1024x500.png",
-        width: 1024,
-        height: 500,
-        alt: "沖縄スキンダイビング 底揺れ・海況ナビ",
-      },
-    ],
-    locale: "ja_JP",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "沖縄スキンダイビング 底揺れ・海況ナビ",
-    description: "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ（サージ）指数と透明度目安を、公開海況データ・地形・水深・潮位・雨量から算出するスキンダイバー向け海況ナビ",
-    images: ["/feature-graphic-1024x500.png"],
-  },
-  verification: {
-    google: "LI9cFF1A57whbJgfDQLcwyn-kkJvSfHqMeEGW_mqA54",
   },
 };
 

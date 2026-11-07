@@ -3,10 +3,10 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "沖縄スキンダイビング 底揺れ・海況ナビ",
-    short_name: "沖縄海況ナビ",
+    name: "水粒子軌道 計算シミュレーター",
+    short_name: "軌道計算",
     description:
-      "沖縄本島・慶良間・宮古・石垣85ポイントの底揺れ指数・透明度目安・潮汐・息止めトレーニングを備えたスキンダイバー向け海況ナビ",
+      "微小振幅波理論および地点別地形パラメータに基づく水粒子軌道振幅・懸濁指数演算シミュレーター",
     start_url: "/",
     scope: "/",
     display: "standalone",

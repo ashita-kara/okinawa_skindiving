@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { X, ArrowDown, MapPin, Shield, Compass, Info, AlertTriangle, Anchor, Map as MapIcon, LayoutGrid } from "lucide-react";
+import { X, ArrowDown, MapPin, Shield, Compass, Info, Anchor, Map as MapIcon, LayoutGrid } from "lucide-react";
 import type { DivePoint } from "@/data/points";
 import {
   calculateUnderwaterSurge,
@@ -215,10 +215,9 @@ export default function SpotDrawer({
                 {current && (
                   <span
                     className={`flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 md:px-2 md:text-xs ${TURBIDITY_META[current.tb.status].badge}`}
-                    title={current.tb.reasons.length > 0 ? `要因: ${current.tb.reasons.join("・")}` : undefined}
                   >
                     <span>{TURBIDITY_META[current.tb.status].icon}</span>
-                    <span>透明度: {TURBIDITY_META[current.tb.status].label}</span>
+                    <span>懸濁指数: {current.tb.score}（{TURBIDITY_META[current.tb.status].label}）</span>
                   </span>
                 )}
                 {current?.ev.reefShielded && (
@@ -240,16 +239,6 @@ export default function SpotDrawer({
                 <Info className="mt-0.5 h-3 w-3 shrink-0 text-sky-500 md:h-3.5 md:w-3.5" />
                 <span className="line-clamp-2 md:line-clamp-none">{point.note}</span>
               </p>
-              {current && current.ev.currentAlerts.length > 0 && (
-                <div className="mt-1.5 space-y-1 md:mt-2">
-                  {current.ev.currentAlerts.map((a) => (
-                    <p key={a.type} className="flex gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[10px] leading-snug text-amber-800 ring-1 ring-amber-200 md:px-3 md:py-1.5 md:text-xs">
-                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 md:h-3.5 md:w-3.5" />
-                      <span><b>{a.title}：</b>{a.message}</span>
-                    </p>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* タイムテーブル */}
@@ -288,31 +277,31 @@ export default function SpotDrawer({
                         </td>
                       ))}
                     </tr>
-                    {/* 判定カラーバー */}
+                    {/* 区分カラーバー */}
                     <tr>
-                      <th className={LABEL}>判定</th>
+                      <th className={LABEL}>区分</th>
                       {cols.map((c, k) => (
                         <td key={c.t} className={`p-0 ${k === activeCol ? "bg-rose-50" : ""}`} onClick={() => onSelectHour(c.i)}>
                           <div className={`h-1.5 md:h-2.5 ${CELL_BG[c.ev.status]}`} title={c.ev.label} />
                         </td>
                       ))}
                     </tr>
-                    {/* 振られ幅 */}
-                    <Row label="振られ幅 cm" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* 軌道幅 */}
+                    <Row label="軌道幅 cm" cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => (
                         <span className={`text-sm font-black md:text-lg ${c.ev.status === "danger" ? "text-rose-600" : c.ev.status === "caution" ? "text-amber-600" : "text-sky-900"}`}>
                           {c.ev.bottomSurgeCm}
                         </span>
                       )}
                     </Row>
-                    {/* 透明度目安 */}
-                    <Row label={<>透明度<span className="hidden text-slate-400 md:inline">目安</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* 懸濁指数 */}
+                    <Row label={<>懸濁<span className="hidden text-slate-400 md:inline">指数</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) => {
                         const m = TURBIDITY_META[c.tb.status];
                         return (
                           <div
                             className="flex flex-col items-center leading-none"
-                            title={c.tb.reasons.length > 0 ? `${m.label}（${c.tb.reasons.join("・")}）` : m.label}
+                            title={`懸濁スコア ${c.tb.score} (${m.label})`}
                           >
                             <span className="text-xs md:text-sm">{m.icon}</span>
                             <span className={`text-[9px] font-semibold md:text-[10px] ${m.text}`}>{m.short}</span>
@@ -331,8 +320,8 @@ export default function SpotDrawer({
                         </div>
                       )}
                     </Row>
-                    {/* 波乗り高さ */}
-                    <Row label={<>波乗り高さ<span className="hidden text-slate-400 md:inline">（目安）</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
+                    {/* 砕波高 Hb */}
+                    <Row label={<>砕波高<span className="hidden text-slate-400 md:inline"> Hb</span></>} cols={cols} activeCol={activeCol} onSelect={onSelectHour} labelCls={LABEL}>
                       {(c) =>
                         c.surf ? (
                           <div className="leading-none md:leading-tight">
@@ -408,7 +397,6 @@ export default function SpotDrawer({
                           </span>
                           <span className="text-[9px] md:text-[10px]">
                             {c.ev.reefShielded ? "⚓遮断" : ""}
-                            {c.ev.currentAlerts.length > 0 && <span className="font-bold text-amber-600">⚠</span>}
                           </span>
                         </div>
                       )}

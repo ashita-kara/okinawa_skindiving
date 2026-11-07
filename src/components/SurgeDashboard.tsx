@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
 import SpotDrawer from "@/components/SpotDrawer";
 import TidePanel from "@/components/TidePanel";
 import ApneaTrainer from "@/components/ApneaTrainer";
@@ -251,13 +250,13 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
           />
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-sky-600">
-              <Waves className="h-4 w-4" /> 沖縄スキンダイビング
+              <Waves className="h-4 w-4" /> 微小振幅波理論 × 地形パラメータ
             </p>
             <h1 className="mt-1 bg-gradient-to-r from-sky-700 via-cyan-600 to-teal-500 bg-clip-text text-2xl font-extrabold text-transparent sm:mt-2 sm:text-5xl">
-              底揺れ・海況ナビ
+              水粒子軌道 計算シミュレーター
             </h1>
             <p className="mt-2 max-w-2xl text-xs text-slate-500 sm:mt-3 sm:text-sm">
-              Open-Meteo の公開数値データに、各ポイントの開口方位・リーフ減衰・基準水深の水粒子軌道と那覇の潮位を掛け合わせ、海中で体が振られる幅の目安（指数）を算出します。
+              公開格子データ（Open-Meteo / 気象庁潮位表）を微小振幅波理論式（L = (gT²/2π)tanh(2πh/L₀), d = H_eff·e^(-kh)）および地点別地形パラメータに代入した際の計算値を表示します。
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
@@ -299,7 +298,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
               className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3.5 py-1.5 text-xs font-bold text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-100 sm:text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
-              底揺れ・海況ナビに戻る
+              シミュレーターに戻る
             </button>
             <div className="inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
               <button
@@ -416,7 +415,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
             <div className="flex flex-wrap gap-2 text-xs">
               {(["calm", "moderate", "caution", "danger"] as const).map((s) => (
                 <span key={s} className={`rounded-full px-2.5 py-0.5 ring-1 ${STATUS_STYLE[s].badge}`}>
-                  {{ calm: "穏やか", moderate: "やや揺れ", caution: "注意", danger: "危険" }[s]} {counts[s]}
+                  {{ calm: "0〜9cm", moderate: "10〜22cm", caution: "23〜39cm", danger: "40cm〜" }[s]} : {counts[s]}
                 </span>
               ))}
             </div>
@@ -439,7 +438,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         )}
         {tide.error && view !== "tide" && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-200">
-            <AlertTriangle className="h-4 w-4" /> 潮位データを取得できなかったため、干潮リーフ遮断と離岸流の判定は行っていません。
+            <AlertTriangle className="h-4 w-4" /> 潮位データを取得できなかったため、潮位閾値補正は未適用です。
           </div>
         )}
 
@@ -516,7 +515,7 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
 
                   <div className="mt-4 flex items-center gap-4">
                     <div className="flex-1">
-                      <p className="text-[11px] text-slate-500">海中の振られ幅（目安）</p>
+                      <p className="text-[11px] text-slate-500">水粒子軌道幅（計算値）</p>
                       <p className="font-mono text-5xl font-black tracking-tight text-sky-900">
                         {hasData ? ev.bottomSurgeCm : "--"}
                         <span className="ml-1 text-lg font-semibold text-slate-500">cm</span>
@@ -543,23 +542,11 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold ring-1 ${tm.badge}`}>
                       <span>{tm.icon}</span>
-                      <span>透明度目安: {tm.label}</span>
+                      <span>懸濁指数: {tb.score}（{tm.label}）</span>
                     </span>
-                    {tb.reasons.length > 0 && (
-                      <span className="text-slate-500">※要因: {tb.reasons.join("・")}</span>
-                    )}
                   </div>
 
-                  {ev.currentAlerts.map((a) => (
-                    <p key={a.type} className="mt-3 flex gap-1.5 rounded-xl bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-800 ring-1 ring-amber-200">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span><b>⚠️ {a.title}</b><br />{a.message}</span>
-                    </p>
-                  ))}
-
-                  <p className="mt-3 text-xs text-slate-600">{ev.advice}</p>
-
-                  <p className="mt-auto flex gap-2 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
+                  <p className="mt-3 flex gap-2 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-500" />
                     {p.note}
                   </p>
@@ -602,14 +589,8 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
         )}
 
         <footer className="mt-10 text-center text-[11px] leading-relaxed text-slate-500">
-          Data: Open-Meteo Marine / Forecast API（1時間キャッシュ）・潮位: 気象庁 潮位表（那覇）<br />
-          ※本サービスは気象業務法に基づく独自の気象・波浪予報業務を行うものではありません。公開数値データと各ポイントの地形条件（水深・開口方位）から算出した参考指数・目安を表示するナビゲーションツールです。離岸流・底揺れ・透明度の表示は安全を保証するものではないため、必ず現地の状況を確認してください。<br />
-          <span className="mt-2 inline-block">
-            © Proto Tools Lab ・{" "}
-            <Link href="/privacy" className="underline hover:text-sky-700">
-              プライバシーポリシー・免責事項
-            </Link>
-          </span>
+          Input Data: Open-Meteo API / 気象庁 潮位表（那覇）<br />
+          微小振幅波理論（Airy波理論）および地点別地形パラメータに基づく数値演算シミュレーター
         </footer>
       </main>
 

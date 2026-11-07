@@ -35,10 +35,10 @@ export const TURBIDITY_META: Record<
   TurbidityStatus,
   { icon: string; label: string; short: string; badge: string; text: string }
 > = {
-  clear: { icon: "💎", label: "クリア", short: "クリア", badge: "bg-cyan-50 text-cyan-700 ring-cyan-200", text: "text-cyan-700" },
-  good: { icon: "💧", label: "良好（浅場のみ微濁り）", short: "良好", badge: "bg-sky-50 text-sky-700 ring-sky-200", text: "text-sky-700" },
-  cloudy: { icon: "🌫️", label: "白濁り・モヤ注意", short: "白濁り", badge: "bg-stone-100 text-stone-700 ring-stone-300", text: "text-stone-600" },
-  poor: { icon: "🟤", label: "視界不良", short: "不良", badge: "bg-amber-100 text-amber-900 ring-amber-300", text: "text-amber-800" },
+  clear: { icon: "💎", label: "区分1 (0–19)", short: "S1", badge: "bg-cyan-50 text-cyan-700 ring-cyan-200", text: "text-cyan-700" },
+  good: { icon: "💧", label: "区分2 (20–39)", short: "S2", badge: "bg-sky-50 text-sky-700 ring-sky-200", text: "text-sky-700" },
+  cloudy: { icon: "🌫️", label: "区分3 (40–64)", short: "S3", badge: "bg-stone-100 text-stone-700 ring-stone-300", text: "text-stone-600" },
+  poor: { icon: "🟤", label: "区分4 (65+)", short: "S4", badge: "bg-amber-100 text-amber-900 ring-amber-300", text: "text-amber-800" },
 };
 
 /**

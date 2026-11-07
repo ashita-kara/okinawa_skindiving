@@ -89,26 +89,17 @@ export function getReefOvertopRatio(point: DivePoint, tideCm: number | null): nu
 }
 
 /**
- * 離岸流（リーフカレント）注意報。
- * リーフ型ポイント（reefThresholdCm 設定あり）のみ対象。
- * ※流速の断定はせず「発生しやすい状態」の注意喚起に留める。
+ * 流速条件チェック（アナウンス廃止に伴い常時空配列を返す）
  */
 export function getCurrentAlerts(
-  point: DivePoint,
-  tide: TideInput | undefined,
-  incidentSwellHeight: number
+  _point: DivePoint,
+  _tide: TideInput | undefined,
+  _incidentSwellHeight: number
 ): CurrentAlert[] {
-  if (point.reefThresholdCm === undefined || !tide || tide.tideCm === null) return [];
-  const alerts: CurrentAlert[] = [];
-  // A: 下げ潮が速く、潮位が中位帯
-  if (tide.deltaCm !== null && tide.deltaCm <= -15 && tide.tideCm >= 50 && tide.tideCm <= 140) {
-    alerts.push(EBB_ALERT);
-  }
-  // B: 満潮付近 + リーフ減衰前の入射うねりが大きい
-  if (tide.tideCm >= 110 && incidentSwellHeight >= 0.5) {
-    alerts.push(SURGE_ALERT);
-  }
-  return alerts;
+  void _point;
+  void _tide;
+  void _incidentSwellHeight;
+  return [];
 }
 
 export function calculateUnderwaterSurge(
@@ -133,11 +124,11 @@ export function calculateUnderwaterSurge(
       bottomSurgeCm: 0,
       exposureRatio: 0,
       status: "calm",
-      label: "ベタ凪（底揺れなし）",
-      advice: "水中は完全に安定しています。透明度も期待できます。",
+      label: "0〜9cm",
+      advice: "",
       reefShielded,
       tideCm,
-      currentAlerts: getCurrentAlerts(point, tide, 0),
+      currentAlerts: [],
     };
   }
 
@@ -158,8 +149,7 @@ export function calculateUnderwaterSurge(
 
   const periodBoost = rawSwellPeriod >= 8 ? 1 + (rawSwellPeriod - 8) * 0.08 : 1.0;
 
-  // 満潮時のリーフ越波：潮位がリーフ天井を越えると、沖からの弱い波がリーフ上で砕けて段波となり、
-  // 浅いインリーフ（水深4m以下）に入って前後に押し引きする「うねり感」として再形成される
+  // 満潮時のリーフ越波補正係数
   const overtop = getReefOvertopRatio(point, tideCm);
   const overtopBoost = 1 + overtop * 0.6;
 
@@ -167,25 +157,17 @@ export function calculateUnderwaterSurge(
   const bottomSurgeCm = Math.round(surgeMeters * 100);
 
   let status: SwellEvaluation["status"] = "calm";
-  let label = "穏やか（快適）";
-  let advice = "底揺れはほぼありません。波酔いの心配もなくスキンダイビングに最適なコンディションです。";
+  let label = "0〜9cm";
 
   if (bottomSurgeCm >= 40) {
     status = "danger";
-    label = "潜水危険（強い底揺れ）";
-    advice = `水深${point.targetDepth}mで約${bottomSurgeCm}cmの強い揺れ。岩場への接触危険・激しい砂巻き上げと波酔いリスクあり。`;
+    label = "40cm〜";
   } else if (bottomSurgeCm >= 23) {
     status = "caution";
-    label = "注意（波酔い・底揺れ警戒）";
-    advice = `水深${point.targetDepth}mで約${bottomSurgeCm}cmの揺れ。うねりで体が振られ、波酔いや浅場の砂巻き上げが起きやすい状態です。`;
+    label = "23〜39cm";
   } else if (bottomSurgeCm >= 10) {
     status = "moderate";
-    label = "やや揺れ（潜水可能）";
-    advice = `水深${point.targetDepth}mで${bottomSurgeCm}cm程度の揺れを感じますが潜水可能です。酔いやすい方は水面での長居に注意。`;
-  }
-
-  if (overtop >= 0.5 && bottomSurgeCm >= 5) {
-    advice += " 満潮でリーフを越えた波が浅いインリーフ内で押し引きのうねりになりやすい時間帯です。";
+    label = "10〜22cm";
   }
 
   return {
@@ -194,10 +176,10 @@ export function calculateUnderwaterSurge(
     exposureRatio: Number(exposureRatio.toFixed(2)),
     status,
     label,
-    advice,
+    advice: "",
     reefShielded,
     tideCm,
-    currentAlerts: getCurrentAlerts(point, tide, incidentSwellHeight),
+    currentAlerts: [],
   };
 }
 
