@@ -414,12 +414,15 @@ export default function SurgeDashboard({ data, tide }: { data: MarineResult; tid
             各スポットカードの <Heart className="inline h-3.5 w-3.5 text-rose-500" /> をタップすると、ここに登録されます。
           </div>
         ) : view === "map" ? (
-          <SurgeMap
-            items={rows}
-            selectedId={drawerOpen ? selectedPoint?.id : mapFocus?.p.id}
-            focusTarget={mapFocus}
-            onSelect={openDrawer}
-          />
+          <div className="space-y-5">
+            <SurgeMap
+              items={rows}
+              selectedId={drawerOpen ? selectedPoint?.id : mapFocus?.p.id}
+              focusTarget={mapFocus}
+              onSelect={openDrawer}
+            />
+            <TidePanel tide={tide} times={times} hourIdx={hourIdx} onSelectHour={setHourIdx} compact />
+          </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map(({ p, sh, sp, sd, wh, ev, tb, hasData }, idx) => {

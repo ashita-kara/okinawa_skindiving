@@ -19,9 +19,10 @@ interface Props {
   times: string[];
   hourIdx: number;
   onSelectHour: (i: number) => void;
+  compact?: boolean;
 }
 
-export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props) {
+export default function TidePanel({ tide, times, hourIdx, onSelectHour, compact = false }: Props) {
   const sliderTime = times[hourIdx];
   const sliderDay = sliderTime?.slice(0, 10);
   const [pickedDay, setPickedDay] = useState<string | null>(null);
@@ -72,129 +73,140 @@ export default function TidePanel({ tide, times, hourIdx, onSelectHour }: Props)
     pickDay(targetDay);
   };
 
+  const graphSection = (
+    <section className="rounded-3xl border border-sky-100 bg-white p-4 shadow-xl sm:p-6" aria-label="24時間タイドグラフ">
+      {day ? (
+        <>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-xs text-slate-500">{tide.station}（気象庁 潮位表）</p>
+              <div className="mt-0.5 flex items-center gap-1 sm:gap-1.5">
+                <button
+                  id="tide-prev-day"
+                  type="button"
+                  onClick={() => goDay(prevDayKey)}
+                  disabled={!hasPrevDay}
+                  aria-label="前日の潮汐"
+                  title="前日へ"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <h2 className="min-w-[7.5rem] text-center text-xl font-bold text-slate-800">
+                  {Number(activeDay.slice(5, 7))}月{Number(activeDay.slice(8, 10))}日（{weekdayJa(activeDay)}）
+                </h2>
+                <button
+                  id="tide-next-day"
+                  type="button"
+                  onClick={() => goDay(nextDayKey)}
+                  disabled={!hasNextDay}
+                  aria-label="翌日の潮汐"
+                  title="翌日へ"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`rounded-full px-3 py-1 font-bold ${TIDE_NAME_STYLE[day.tideName]}`}>{day.tideName}</span>
+              <span className="flex items-center gap-1 text-slate-600">
+                <span className="text-lg">{moonEmoji(day.moonAge)}</span>月齢 {day.moonAge.toFixed(1)}
+              </span>
+            </div>
+          </div>
+
+          <TideGraph
+            day={day}
+            nextDay={nextDay}
+            cursorTime={sliderDay === activeDay ? sliderTime : undefined}
+            onPickHour={(h) => {
+              const i = times.findIndex((t) => t === `${activeDay}T${String(h).padStart(2, "0")}:00`);
+              if (i >= 0) {
+                onSelectHour(i);
+                setPickedDay(null);
+              }
+            }}
+            clickable={forecastDays.has(activeDay)}
+          />
+
+          {/* 日めくりバー（グラフ直下） */}
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-2xl bg-sky-50/70 p-1.5 ring-1 ring-sky-100">
+            <button
+              type="button"
+              onClick={() => goDay(prevDayKey)}
+              disabled={!hasPrevDay}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0" />
+              <span>
+                前日（{Number(prevDayKey.slice(5, 7))}/{Number(prevDayKey.slice(8, 10))} {weekdayJa(prevDayKey)}）
+              </span>
+            </button>
+
+            {times[0] && activeDay !== times[0].slice(0, 10) && (
+              <button
+                type="button"
+                onClick={() => goDay(times[0].slice(0, 10))}
+                className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-sky-700"
+              >
+                今日へ戻る
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => goDay(nextDayKey)}
+              disabled={!hasNextDay}
+              className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
+            >
+              <span>
+                翌日（{Number(nextDayKey.slice(5, 7))}/{Number(nextDayKey.slice(8, 10))} {weekdayJa(nextDayKey)}）
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0" />
+            </button>
+          </div>
+
+          {!compact && (
+            <>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[...day.highs.map((e) => ({ ...e, kind: "満潮" as const })), ...day.lows.map((e) => ({ ...e, kind: "干潮" as const }))]
+                  .sort((a, b) => a.time.localeCompare(b.time))
+                  .map((e) => (
+                    <div
+                      key={e.kind + e.time}
+                      className={`rounded-2xl px-3 py-2 ${e.kind === "満潮" ? "bg-sky-50 text-sky-800" : "bg-amber-50 text-amber-800"}`}
+                    >
+                      <p className="flex items-center gap-1 text-[11px] font-semibold">
+                        {e.kind === "満潮" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                        {e.kind}
+                      </p>
+                      <p className="font-mono text-lg font-bold leading-tight">{e.time}</p>
+                      <p className="font-mono text-xs">{e.cm}cm</p>
+                    </div>
+                  ))}
+              </div>
+              <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
+                <Anchor className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-500" />
+                緑の帯（{REEF_BAND.low}〜{REEF_BAND.high}cm）はアウターリーフが防波堤として効き始める目安です。潮位がポイントごとの基準値以下になると、一覧・地図の計算値に自動で反映されます。
+                {forecastDays.has(activeDay) && " グラフをタップするとその時刻に切り替わります。"}
+              </p>
+            </>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-slate-500">この日の潮位データはありません。</p>
+      )}
+    </section>
+  );
+
+  if (compact) {
+    return graphSection;
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
-      {/* タイドグラフ */}
-      <section className="rounded-3xl border border-sky-100 bg-white p-4 shadow-xl sm:p-6" aria-label="24時間タイドグラフ">
-        {day ? (
-          <>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="text-xs text-slate-500">{tide.station}（気象庁 潮位表）</p>
-                <div className="mt-0.5 flex items-center gap-1 sm:gap-1.5">
-                  <button
-                    id="tide-prev-day"
-                    type="button"
-                    onClick={() => goDay(prevDayKey)}
-                    disabled={!hasPrevDay}
-                    aria-label="前日の潮汐"
-                    title="前日へ"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <h2 className="min-w-[7.5rem] text-center text-xl font-bold text-slate-800">
-                    {Number(activeDay.slice(5, 7))}月{Number(activeDay.slice(8, 10))}日（{weekdayJa(activeDay)}）
-                  </h2>
-                  <button
-                    id="tide-next-day"
-                    type="button"
-                    onClick={() => goDay(nextDayKey)}
-                    disabled={!hasNextDay}
-                    aria-label="翌日の潮汐"
-                    title="翌日へ"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 active:scale-95 disabled:opacity-30"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className={`rounded-full px-3 py-1 font-bold ${TIDE_NAME_STYLE[day.tideName]}`}>{day.tideName}</span>
-                <span className="flex items-center gap-1 text-slate-600">
-                  <span className="text-lg">{moonEmoji(day.moonAge)}</span>月齢 {day.moonAge.toFixed(1)}
-                </span>
-              </div>
-            </div>
-
-            <TideGraph
-              day={day}
-              nextDay={nextDay}
-              cursorTime={sliderDay === activeDay ? sliderTime : undefined}
-              onPickHour={(h) => {
-                const i = times.findIndex((t) => t === `${activeDay}T${String(h).padStart(2, "0")}:00`);
-                if (i >= 0) {
-                  onSelectHour(i);
-                  setPickedDay(null);
-                }
-              }}
-              clickable={forecastDays.has(activeDay)}
-            />
-
-            {/* 日めくりバー（グラフ直下） */}
-            <div className="mt-2 flex items-center justify-between gap-2 rounded-2xl bg-sky-50/70 p-1.5 ring-1 ring-sky-100">
-              <button
-                type="button"
-                onClick={() => goDay(prevDayKey)}
-                disabled={!hasPrevDay}
-                className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
-              >
-                <ChevronLeft className="h-4 w-4 shrink-0" />
-                <span>
-                  前日（{Number(prevDayKey.slice(5, 7))}/{Number(prevDayKey.slice(8, 10))} {weekdayJa(prevDayKey)}）
-                </span>
-              </button>
-
-              {times[0] && activeDay !== times[0].slice(0, 10) && (
-                <button
-                  type="button"
-                  onClick={() => goDay(times[0].slice(0, 10))}
-                  className="shrink-0 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-sky-700"
-                >
-                  今日へ戻る
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => goDay(nextDayKey)}
-                disabled={!hasNextDay}
-                className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 shadow-xs ring-1 ring-sky-100 transition hover:bg-sky-50 active:scale-98 disabled:opacity-35 sm:text-sm"
-              >
-                <span>
-                  翌日（{Number(nextDayKey.slice(5, 7))}/{Number(nextDayKey.slice(8, 10))} {weekdayJa(nextDayKey)}）
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0" />
-              </button>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[...day.highs.map((e) => ({ ...e, kind: "満潮" as const })), ...day.lows.map((e) => ({ ...e, kind: "干潮" as const }))]
-                .sort((a, b) => a.time.localeCompare(b.time))
-                .map((e) => (
-                  <div
-                    key={e.kind + e.time}
-                    className={`rounded-2xl px-3 py-2 ${e.kind === "満潮" ? "bg-sky-50 text-sky-800" : "bg-amber-50 text-amber-800"}`}
-                  >
-                    <p className="flex items-center gap-1 text-[11px] font-semibold">
-                      {e.kind === "満潮" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                      {e.kind}
-                    </p>
-                    <p className="font-mono text-lg font-bold leading-tight">{e.time}</p>
-                    <p className="font-mono text-xs">{e.cm}cm</p>
-                  </div>
-                ))}
-            </div>
-            <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
-              <Anchor className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-500" />
-              緑の帯（{REEF_BAND.low}〜{REEF_BAND.high}cm）はアウターリーフが防波堤として効き始める目安です。潮位がポイントごとの基準値以下になると、一覧・地図の底揺れ計算に自動で反映されます。
-              {forecastDays.has(activeDay) && " グラフをタップするとその時刻に切り替わります。"}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-slate-500">この日の潮位データはありません。</p>
-        )}
-      </section>
+      {graphSection}
 
       {/* 月間カレンダー */}
       <section className="rounded-3xl border border-sky-100 bg-white p-4 shadow-xl sm:p-6" aria-label="月間潮回りカレンダー">
